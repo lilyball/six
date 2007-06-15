@@ -1,0 +1,44 @@
+
+ ========
+ = TODO =
+ ========
+
+WHOIS response for NickServ ID'ed users:
+Unreal:
+   307: cyanite is a registered nick
+Freenode:
+   320: cyanite is identified to services
+
+
+
+
+• Better exceptions from dir_walk in configspace (on missing meta).
+
+• Protect topic command with 'topic' capability.
+
+• Help for config space is ok. But we need:
+   · Help for plugins.
+   · Help for commands (more than USAGE).
+
+• Create an admin (or similar) plugin for stuff like quit, load, disconnect etc., and make it possible
+  to dynamically connect to new servers, disconnect and join/part etc. Also, move say, do etc. to a plugin
+  called something like comm or communication.
+
+• IRC base as well as the bot should handle being PARTed, KICKed, QUITed etc.
+
+• Figure out frameworks for:
+   · Regaining OP if lost, or if needed at some point.
+   · Dealing with abuse (support punishment).
+
+• React, maybe, to services private notices. Perhabs not needed.
+
+
+
+ ========
+ = DONE =
+ ========
+
+• Ask for a WHO list after joining a channel, to collect masks.
+• Delay calling on_init until we get that list.
+• Leading ~ apparently does NOT mean IRC Operator. Figure out what it means, and fix it.
+

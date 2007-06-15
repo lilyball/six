@@ -1,0 +1,49 @@
+# CyBot 0.2 main configuration file. Be careful when editing this file manually,
+# as it is automatically saved run-time. On-line edit is recomended.
+
+#########    --------------------------------------------------    #########
+#########    REMEMBER TO SHUT DOWN THE BOT BEFORE YOU EDIT THIS    #########
+#########    --------------------------------------------------    #########
+#########    This is because the bot writes the whole of this      #########
+#########    file out when it is closed down.                      #########
+#########    --------------------------------------------------    #########
+--- 
+plugins: 
+  # path: # Path to plugins, default is ./plugins
+  # - plugins
+  autoload: # List the plugins to be autoloaded
+  - logger
+  - scribe
+  - topic
+  - web
+servers: 
+  freenode:
+    topic-follow: true # Whether to follow the topics of channels on this server
+    nicks: # The Obvious ;)
+    - Automator
+    - Automator_
+    - Automator__
+    autoconnect: true
+      # ↑ Do I autoconnect to this network or not?
+    services: 
+      nickserv: 
+        whois-code: 320 # Not sure - check with cyanite
+          # ↑ Code used to recognize identified users in WHOIS response. This is network dependent.
+        password: bot
+          # ↑ Password to identify with nickserv.
+    host: irc.freenode.net
+      # ↑ URI of this server
+    users: # Either define here, or /msg register? with the bot.
+      Caius: # Username.
+        masks: # Mask - this is auto added when you first register.
+        - Caius!n=inemo@about/apple/powerbook/Caius
+        plugins: # List plugins that this user can use, only because test doesn't have user level checking.
+        - test
+        owner: true
+        # ↑ Has to be set manually, tells the bot you are the owner (admin).
+        password: xxxx
+    channels: 
+      "#cybot": # Channel name
+        chanserv: 
+          op: false
+          # ↑ Do we auto ask chanserv for +o on this channel?
