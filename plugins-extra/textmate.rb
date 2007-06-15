@@ -119,6 +119,7 @@ class Textmate < PluginBase
           result = f.gets.strip
         end
         irc.reply result
+        @requests -= 1
       end
     end
   end
