@@ -54,7 +54,7 @@ class Address
 
   # Normalize a nick name.
   def Address.normalize(nick_name)
-    nick_name.downcase.tr('[]\\', '{}|')
+    nick_name.to_s.downcase.tr('[]\\', '{}|')
   end
 
   # Return the normalized nick name.
