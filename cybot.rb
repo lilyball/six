@@ -2,9 +2,12 @@
 #
 # CyBot.
 #
+# Set the version
+$version = "0.2"
+
 
 # Some modules we need.
-puts 'CyBot v0.2 starting up...'
+puts "CyBot v#{$version} starting up..."
 require 'thread'
 require 'pluginbase'
 require 'configspace/configspace'

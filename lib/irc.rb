@@ -513,7 +513,7 @@ class Irc < PluginBase
   help :uptime, 'Displays the current bot uptime.'
 
   def cmd_version(irc, line)
-    irc.action 'is an embodiment of CyBot 0.2.'
+    irc.action "is an embodiment of CyBot v#{$version}."
   end
   help :version, 'Displays the CyBot release number.'
 
