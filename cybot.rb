@@ -69,6 +69,13 @@ $config = ConfigSpace.new(ARGV[0]) or return 1
 $config.prefix = <<EOS
 # CyBot 0.2 main configuration file. Be careful when editing this file manually,
 # as it is automatically saved run-time. On-line edit is recomended.
+
+#########    --------------------------------------------------    #########
+#########    REMEMBER TO SHUT DOWN THE BOT BEFORE YOU EDIT THIS    #########
+#########    --------------------------------------------------    #########
+#########    This is because the bot writes the whole of this      #########
+#########    file out when it is closed down.                      #########
+#########    --------------------------------------------------    #########
 EOS
 
 # Save everything.
