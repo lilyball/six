@@ -164,6 +164,9 @@ class PluginBase
 
   # Open or create a plugin data-file. Can accept a block.
   def open_file(name, mode = 'r', &block)
+		# Check that data exists
+		Dir.mkdir('data') unless File.directory?('data')
+		
     path = "data/#{self.class.name.downcase}"
     Dir.mkdir(path) unless File.directory?(path)
     File.open("#{path}/#{name}", mode, &block)
