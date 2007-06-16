@@ -140,6 +140,7 @@ class Plugin < PluginBase
       irc.reply 'Plugin unloaded successfully!'
     end
   end
+	help :unload, "Unloads a loaded plugin."
 
   # Loads a new plugin.
   def cmd_load(irc, plugin)
@@ -170,10 +171,12 @@ class Plugin < PluginBase
       end
     end
   end
+	help :load, "Loads a plugin in the plugin path."
 
   def cmd_list(irc, line)
     irc.reply "The following plugins are loaded: \x02#{$plugins.keys.sort.join(', ')}.\x0f"
   end
+	help :list, "Lists all loaded plugins."
 
 end
 
