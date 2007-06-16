@@ -30,7 +30,7 @@ Freenode:
    · Regaining OP if lost, or if needed at some point.
    · Dealing with abuse (support punishment).
 
-• React, maybe, to services private notices. Perhabs not needed.
+• React, maybe, to services private notices. Perhaps not needed.
 
 • Prefix log messages with current time
 
