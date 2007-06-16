@@ -67,6 +67,7 @@ class Phrases < PluginBase
       irc.reply "No phrase matched '#{phrase}'"
     end
   end
+	help :get, "Display a phrase for a given pattern.  To set phrases use 'set'"
 
   # Set the phrase for a pattern
   # Usage: $set <pattern> => <phrase>
@@ -94,12 +95,14 @@ class Phrases < PluginBase
     end
     irc.puts 'Phrase stored'
   end
+	help :set, "Set the phrase for a pattern.Usage: set <pattern> => <response phrase>. Pattern can be a constant phrase or a /rege/x./ Response phrase can contain [variables]: me, you, $1+."
 
   def cmd_reload(irc, line)
     return unless authed?(irc)
     load
     irc.reply 'Phrases reloaded from disk'
   end
+	help :reload, "Reloads all phrases from disk.  Make sure to save any changes you've made first."
 
   def cmd_save(irc, line)
     return unless authed?(irc)
@@ -109,6 +112,7 @@ class Phrases < PluginBase
       irc.reply "Couldn't write phrases to disk"
     end
   end
+	help :save, "Save phrases to disk."
 
   # Load/save the phrases data
   # These seem to be called automatically at (un)load
