@@ -123,7 +123,7 @@ class Textmate < PluginBase
       end
     end
   end
-
+	help :calc, "Calculates the expression given and returns the answer. The expression must be in the bc language."
 
 end
 
