@@ -8,12 +8,6 @@ require 'set'
 
 class Textmate < PluginBase
 
-  def initialize
-    super
-    @requests = 0
-    @max_requests = 4
-  end
-
   def phrase_to_keywords(phrase)
     phrase.gsub(/\b(\w+)s\b/, '\1').downcase.split(/\W/).to_set
   end
@@ -31,35 +25,30 @@ class Textmate < PluginBase
   end
 
   def cmd_doc(irc, line)
-    if @requests >= @max_requests
-      irc.reply 'Too many outstanding requests. Try again in a moment.'
-      return
-    elsif !line or line.empty?
+    if line.to_s.empty?
       irc.reply 'USAGE: doc <search string or regex>'
-      return
-    end
-    @requests += 1
-    Thread.new do
-      Net::HTTP.start('macromates.com') do |http|
-        re = http.get('/textmate/manual/',  { 'User-Agent' => 'CyBrowser' })
-        if re.code == '200'
+    else
+      Async.run(irc) do
+        Net::HTTP.start('macromates.com') do |http|
+          re = http.get('/textmate/manual/',  { 'User-Agent' => 'CyBrowser' })
+          if re.code == '200'
 
-          search_keywords = phrase_to_keywords(line)
-          entries = parse_toc re.body
-          matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-          if matches.empty?
-            irc.reply 'No matches found.'
+            search_keywords = phrase_to_keywords(line)
+            entries = parse_toc re.body
+            matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+            if matches.empty?
+              irc.reply 'No matches found.'
+            else
+              ranked = matches.map { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+              hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+              irc.respond "\x02#{hit[:title]}\x0f #{hit[:link]}"
+            end
+
           else
-            ranked = matches.map { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-            hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-            irc.respond "\x02#{hit[:title]}\x0f #{hit[:link]}"
+            irc.reply "Documentation site returned an error: #{re.code} #{re.message}"
           end
-
-        else
-          irc.reply "Documentation site returned an error: #{re.code} #{re.message}"
         end
       end
-      @requests -= 1
     end
   end
   help :doc, 'Searches the TextMate manual for the given string or regex.'
@@ -76,54 +65,47 @@ class Textmate < PluginBase
   end
 
   def cmd_faq(irc, line)
-    if @requests >= @max_requests
-      irc.reply 'Too many outstanding requests. Try again in a moment.'
-      return
-    elsif !line or line.empty?
+    if line.to_s.empty?
       irc.reply 'USAGE: faq <search keyword(s)>'
-      return
-    end
-    @requests += 1
-    Net::HTTP.start('macromates.com') do |http|
-      re = http.get('/wiki/Main/FAQ',  { 'User-Agent' => 'CyBrowser' })
-      if re.code == '200'
+    else
+      Async.run(irc) do
+        Net::HTTP.start('macromates.com') do |http|
+          re = http.get('/wiki/Main/FAQ',  { 'User-Agent' => 'CyBrowser' })
+          if re.code == '200'
 
-        search_keywords = phrase_to_keywords(line)
-        entries = parse_faq re.body
-        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-        if matches.empty?
-          irc.reply 'No matches found.'
-        else
-          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-          irc.respond hit[:link]
+            search_keywords = phrase_to_keywords(line)
+            entries = parse_faq re.body
+            matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+            if matches.empty?
+              irc.reply 'No matches found.'
+            else
+              ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+              hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+              irc.respond hit[:link]
+            end
+
+          end
         end
-
       end
-      @requests -= 1
     end
   end
   help :faq, 'Searches the TextMate FAQ for the given keyword(s).'
 
   def cmd_calc(irc, line)
-    if @requests >= @max_requests
-      irc.reply 'Too many outstanding requests. Try again in a moment.'
-    elsif !line or line.empty?
+    if line.to_s.empty?
       irc.reply 'USAGE: calc <expression>. The expression must be in the bc language.'
     else
-      @requests += 1
-      Async.run do
+      Async.run(irc) do
         result = nil
         IO.popen('bc -l 2>&1', 'r+') do |f|
           f.puts line
           result = f.gets.strip
         end
         irc.reply result
-        @requests -= 1
       end
     end
   end
-	help :calc, "Calculates the expression given and returns the answer. The expression must be in the bc language."
+  help :calc, "Calculates the expression given and returns the answer. The expression must be in the bc language."
 
 end
 
