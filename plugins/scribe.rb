@@ -121,7 +121,7 @@ class Scribe < PluginBase
   # List unread notes.
   def cmd_notes(irc, line)
     u = $user.get_nick(irc) or return
-    if (s = @notes[irc.server.name]) and (s = s[IRC::Address.normalize u]) and !s.empty?
+    if (s = @notes[irc.server.name]) and (s = s[IRC::Address.normalize(u)]) and !s.empty?
       i = 0
       irc.reply "You have the following notes: #{s.map do |e|
         i += 1
