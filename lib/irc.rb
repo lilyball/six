@@ -74,6 +74,8 @@ class Irc < PluginBase
     if cmd_name == '?'
       irc.reply "Type '<plugin name>?' to get brief help and a command list, where <plugin name> is one of: \x02#{$plugins.keys.sort.join(', ')}.\x0f  Also try '<plugin name> <command name>?'."
       return nil
+		elsif cmd_name == "help" || cmd_name == "help?" # Don't name a plugin help!
+			irc.reply "Try '?' instead of help."
     end
     (help = cmd_name[-1] == ??) and cmd_name.chop!
     cmd = $commands[cmd_name]
