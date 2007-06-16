@@ -32,6 +32,17 @@ Freenode:
 
 • React, maybe, to services private notices. Perhabs not needed.
 
+• Prefix log messages with current time
+
+• Give a full stack trace for catched exceptions
+
+• Support globs/patterns for $seen
+
+• Tell user when he is not identified with the IRC server and tries to use $notes or similar
+
+• Maybe make $notes only use WHOIS rather than require $register/$identify
+
+• Always check WHOIS prior to $whoami/$note/$notes (might be obsolote if we do the above)
 
 
  ========
