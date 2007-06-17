@@ -44,6 +44,8 @@ Freenode:
 
 • Always check WHOIS prior to $whoami/$note/$notes (might be obsolote if we do the above)
 
+• Do not write out the config-space when nothing has changed. I have a test branch with a test config file, and after each test-run I get a different config file written to disk (re-ordering of items in the hash) which means I have to revert the config file before I can leave the branch.
+
 
  ========
  = DONE =
