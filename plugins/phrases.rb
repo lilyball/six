@@ -73,7 +73,7 @@ class Phrases < PluginBase
   # Usage: $set <pattern> => <phrase>
   def cmd_set(irc, line)
     return unless authed?(irc)
-    (pattern, text) = line.strip.split(/\s*=>\s*/)
+    (pattern, text) = line.strip.split(/\s*=>\s*/, 1)
 
     if !pattern || !text || pattern.empty? || text.empty?
       irc.reply 'Usage: set <pattern> => <response phrase>'
