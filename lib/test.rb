@@ -11,6 +11,19 @@ class Test < PluginBase
     $config.allow_dir_add = true
   end
 
+  # Checks whether the user is allowed to use this plugin
+  # Informs them and returns false if not 
+  # 
+  # This method is copied from plugins/phrases.rb so
+  # We may want to move it to our super class (PluginBase)
+  def authed?(irc)
+    if !$user.caps(irc, 'op', 'owner').any?
+      irc.reply "You aren't allowed to use this command"
+      return false
+    end
+    true
+  end
+
   def cmd_echo(irc, line)
     irc.puts line
   end
@@ -32,21 +45,25 @@ class Test < PluginBase
   help :commands, "Displays a global command list. Deprecated in favor of '?' and '<plugin>?'."
 
   def cmd_quit(irc, line)
+    return unless authed?(irc)
     irc.server.quit_all(line)
   end
   help :quit, 'Gracefully quits CyBot, disconnecting from all servers.'
 
   def serv_disconnect(irc, serv, line)
+    return unless authed?(irc)
     serv.quit(line)
   end
   help :disconnect, 'Makes CyBot disconnect from the current server.'
 
   def cmd_dump_cfg(irc, line)
+    return unless authed?(irc)
     $config.dump
   end
   help :dump_cfg, "Debug command to dump the config tree to the console. Don't use!"
 
   def cmd_save(irc, line)
+    return unless authed?(irc)
     $plugins.each_value { |p| p.save }
     $config.save(line)
     irc.reply "Ok, configuration saved!"
@@ -54,6 +71,7 @@ class Test < PluginBase
   help :save, 'Saves the current configuration tree.'
 
   def cmd_load(irc, line)
+    return unless authed?(irc)
     $config.load(line)
     irc.reply "Ok, configuration loaded from '#{$config.file}'"
   end
@@ -69,6 +87,8 @@ class Test < PluginBase
   help :help, 'Gives help on a config tree path.'
 
   def cmd_set(irc, line)
+
+    return unless authed?(irc)
 
     # Split arguments.
     if line: path, value = line.split(' ', 2)
@@ -90,6 +110,8 @@ class Test < PluginBase
   help :set, 'Sets a config tree item. USAGE: set <path> <value>.'
 
   def cmd_del(irc, line)
+
+    return unless authed?(irc)
 
     # Split arguments.
     if line: path, value = line.split(' ', 2)
@@ -117,6 +139,8 @@ class Test < PluginBase
 
   def cmd_add(irc, line)
 
+    return unless authed?(irc)
+
     # Split arguments.
     if line: path, value = line.split(' ', 2)
     else path = nil end
@@ -143,6 +167,7 @@ class Test < PluginBase
 
 
   def cmd_list(irc, path)
+    return unless authed?(irc)
     begin
 
       # Crude option parsing :p.
