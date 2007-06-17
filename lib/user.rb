@@ -315,23 +315,26 @@ class User < PluginBase
         end
       end
 
+      # Check if the given password is correct.
       if !p or p != pass
         irc.reply 'Incorrect password given.'
-      elsif (s = @serv[sn]) and s[nnn]
+        return
+      end
+
+      # Auto hash password, if needed.
+      unless hashed_pw
+        u['password'] = Digest::SHA1.hexdigest pass
+        irc.reply "Your password was rehashed." unless silent
+      end
+
+      if (s = @serv[sn]) and s[nnn]
         irc.reply "You're already identified, #{nn} :-)." unless silent
       else
         real_nn = irc.from.nnick
         irc.server.channels.each_value do |chan|
           if chan.users.include?(real_nn)
-
             @serv[sn] = (s = {}) unless s
             seen_user(irc, s, real_nn, nnn)
-
-            # Auto hash password, if needed.
-            unless hashed_pw
-              u['password'] = Digest::SHA1.hexdigest pass
-            end
-
             unless silent
               usr_str = (real_nn == nnn) ? '' : "real nick: #{nn}, "
               irc.reply "Alright, you're now identified (#{usr_str}using mask: #{irc.from.mask})!"
