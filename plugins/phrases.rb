@@ -114,9 +114,9 @@ class Phrases < PluginBase
       end
     end
     if @phrases.delete(pattern)
-      irc.reply "Phrase deleted"
+      irc.reply "Phrase #{pattern.inspect} deleted"
     else
-      irc.reply "Phrase not found"
+      irc.reply "Phrase #{pattern.inspect} not found"
     end
   end
   
