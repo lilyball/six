@@ -2,6 +2,8 @@
 # CyBot - User management.
 #
 
+require 'digest/sha1'
+
 
 # Neat array stuff.
 class Array
@@ -277,7 +279,7 @@ class User < PluginBase
       from = irc.from
       map = $config.ensure("servers/#{irc.server.name}/users/#{from.nnick}")
       if map.empty?
-        map['password'] = password
+        map['password'] = Digest::SHA1.hexdigest(password)
         irc.reply "Ok, you've been registrated with password '#{password}'. Default authentication mode is 'trusted'."
       else
         irc.reply "You're already registrated, or someone else is with YOUR nick! *gasp*"
@@ -303,7 +305,17 @@ class User < PluginBase
         silent = true
         pass = pass[1..-1]
       else silent = false end
-      if !(p = u['password']) or p != pass
+
+      # Auto detect hashed passwords.
+      hashed_pw = false
+      if (p = u['password'])
+        if p.length == 40 and p =~ /^[0-9a-f]{40}$/
+          pass = Digest::SHA1.hexdigest pass
+          hashed_pw = true
+        end
+      end
+
+      if !p or p != pass
         irc.reply 'Incorrect password given.'
       elsif (s = @serv[sn]) and s[nnn]
         irc.reply "You're already identified, #{nn} :-)." unless silent
@@ -311,8 +323,15 @@ class User < PluginBase
         real_nn = irc.from.nnick
         irc.server.channels.each_value do |chan|
           if chan.users.include?(real_nn)
+
             @serv[sn] = (s = {}) unless s
             seen_user(irc, s, real_nn, nnn)
+
+            # Auto hash password, if needed.
+            unless hashed_pw
+              u['password'] = Digest::SHA1.hexdigest pass
+            end
+
             unless silent
               usr_str = (real_nn == nnn) ? '' : "real nick: #{nn}, "
               irc.reply "Alright, you're now identified (#{usr_str}using mask: #{irc.from.mask})!"
