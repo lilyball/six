@@ -73,7 +73,7 @@ class Phrases < PluginBase
   # Usage: $set <pattern> => <phrase>
   def cmd_set(irc, line)
     return unless authed?(irc)
-    (pattern, text) = line.strip.split(/\s*=>\s*/, 1)
+    (pattern, text) = line.strip.split(/\s*=>\s*/, 2)
 
     if !pattern || !text || pattern.empty? || text.empty?
       irc.reply 'Usage: set <pattern> => <response phrase>'
@@ -97,6 +97,29 @@ class Phrases < PluginBase
   end
 	help :set, "Set the phrase for a pattern.Usage: set <pattern> => <response phrase>. Pattern can be a constant phrase or a /rege/x./ Response phrase can contain [variables]: me, you, $1+."
 
+  def cmd_del(irc, pattern)
+    return unless authed?(irc)
+
+    if pattern.nil? or pattern.strip.empty?
+      irc.reply 'USAGE: del <pattern>'
+      return
+    end
+
+    if pattern =~ %r|/(.+)/([eimnosux]*)|
+      begin
+        pattern = Regexp.new($1, $2.empty? ? nil : $2)
+      rescue Exception => e
+        irc.reply "Error compiling pattern"
+        return
+      end
+    end
+    if @phrases.delete(pattern)
+      irc.reply "Phrase deleted"
+    else
+      irc.reply "Phrase not found"
+    end
+  end
+  
   def cmd_reload(irc, line)
     return unless authed?(irc)
     load
