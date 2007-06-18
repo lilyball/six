@@ -34,7 +34,7 @@ Freenode:
 
 • Prefix log messages with current time
 
-• Give a full stack trace for catched exceptions
+• Give a full stack trace for caught exceptions
 
 • Support globs/patterns for $seen
 
