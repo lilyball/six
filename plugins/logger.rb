@@ -10,8 +10,8 @@ class Logger < PluginBase
   # Some per-channel init.
   def initialize(*args)
     @brief_help = 'Records various channel activities.'
-    super(*args)
     @seen = {}
+    super(*args)
   end
 
   # Load/save database.
