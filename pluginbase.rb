@@ -214,7 +214,7 @@ class PluginBase
           ('"' + a + '"') : (':' + a.to_s)}.join(', ')}))
       end
     EOS
-#    Kernel.puts "Genrated code: " + code
+#    $log.puts "Genrated code: " + code
     class_eval code
 
   end

@@ -22,11 +22,11 @@ class Plugin < PluginBase
 
   # Special initializer method for core plugins. We feel special :-).
   def on_startup
-    puts 'Autoloading plugins...'
+    $log.puts 'Autoloading plugins...'
     autoload = $config['plugins/autoload', []]
     autoload.each do |plugin|
       if $plugins[pn = plugin.downcase]
-        puts "Plugin '#{pn.capitalize}' was already loaded; skipping."
+        $log.puts "Plugin '#{pn.capitalize}' was already loaded; skipping."
       else
         begin
           if !load_plugin(pn)
@@ -35,12 +35,12 @@ class Plugin < PluginBase
             ins = klass.instance
             $plugins[ins.name] = ins
           else
-            puts "Error loading plugin '#{pn.capitalize}': Couldn't locate plugin class."
+            $log.puts "Error loading plugin '#{pn.capitalize}': Couldn't locate plugin class."
           end
         rescue Exception => e
-          puts "Error loading plugin '#{pn.capitalize}':"
-          puts e.message
-          puts e.backtrace.join("\n")
+          $log.puts "Error loading plugin '#{pn.capitalize}':"
+          $log.puts e.message
+          $log.puts e.backtrace.join("\n")
         end
       end
     end
@@ -52,7 +52,7 @@ class Plugin < PluginBase
     path.each do |dir|
       begin
         Plugins.module_eval { load("#{dir}/#{name}.rb") }
-        puts "Loaded plugin '#{name.capitalize}' [#{dir}/#{name}.rb]"
+        $log.puts "Loaded plugin '#{name.capitalize}' [#{dir}/#{name}.rb]"
         return true
       rescue LoadError
         # Just try the next directory...
@@ -107,9 +107,9 @@ class Plugin < PluginBase
         return
       end
     rescue Exception => e
-      Kernel.puts "Error loading plugin '#{pn.capitalize}':"
-      Kernel.puts e.message
-      Kernel.puts e.backtrace.join("\n")
+      $log.puts "Error loading plugin '#{pn.capitalize}':"
+      $log.puts e.message
+      $log.puts e.backtrace.join("\n")
       msg = p.reload_failed(e) || e.message
       irc.reply "Error reloading plugin: #{msg}"
       return
@@ -159,14 +159,14 @@ class Plugin < PluginBase
           $plugins[ins.name] = ins
           irc.reply 'Plugin loaded successfully!'
         else
-          puts "Error loading plugin '#{pn.capitalize}':"
-          puts "Couldn't locate plugin class."
+          $log.puts "Error loading plugin '#{pn.capitalize}':"
+          $log.puts "Couldn't locate plugin class."
           irc.reply "Error loading plugin: Couldn't locate the plugin class."
         end
       rescue Exception => e
-        puts "Error loading plugin '#{pn.capitalize}':"
-        puts e.message
-        puts e.backtrace.join("\n")
+        $log.puts "Error loading plugin '#{pn.capitalize}':"
+        $log.puts e.message
+        $log.puts e.backtrace.join("\n")
         irc.reply "Error loading plugin: #{e.message}"
       end
     end

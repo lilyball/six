@@ -196,14 +196,14 @@ class ConfigSpace
   end
 
   def dump
-    puts 'Meta:'
+    $log.puts 'Meta:'
     p @meta
-    puts 'Config:'
+    $log.puts 'Config:'
     p @cfg
   end
 
   def dump_cfg
-    puts 'Config:'
+    $log.puts 'Config:'
     p @cfg
   end
 
@@ -599,7 +599,7 @@ begin
 
   # Our change-hook.
   def on_change(type, map, key, *args)
-    puts "> Type: #{type}  key: #{key}  args: #{args.inspect}"
+    $log.puts "> Type: #{type}  key: #{key}  args: #{args.inspect}"
     nil
   end
 
@@ -639,8 +639,8 @@ begin
 
 
 rescue Exception => e
-  puts e.message
-  puts e.backtrace.join("\n")
+  $log.puts e.message
+  $log.puts e.backtrace.join("\n")
 end
 end
 

@@ -145,7 +145,7 @@ class Irc < PluginBase
           rescue User::SecurityError => e
             irc.reply e.message
           rescue Exception => e
-            Kernel.puts e.message
+            $log.puts e.message
           end
 
         end
@@ -156,7 +156,7 @@ class Irc < PluginBase
     def on_notice(from, message)
 
       if message[0] == ?!
-        puts "-- [#{@name}] #{from}: #{message[1..-1]}"
+        $log.puts "-- [#{@name}] #{from}: #{message[1..-1]}"
       end
 
       # Invoke hooks.
@@ -176,10 +176,10 @@ class Irc < PluginBase
     def on_init
 
       # Request modes from ChanServ, if needed.
-      Kernel.puts "Channel #{@name} joined!"
+      $log.puts "Channel #{@name} joined!"
       if (cs = $config["servers/#{@server.name}/channels/#{@nname}/chanserv"])
         name = $config["servers/#{@server.name}/services/chanserv/name"] || 'ChanServ'
-        Kernel.puts "Requesting modes from #{name}..."
+        $log.puts "Requesting modes from #{name}..."
         @server.cmd('PRIVMSG', name, "OP #{@name}") if cs['op']
         @server.cmd('PRIVMSG', name, "VOICE #{@name}") if cs['voice']
       end
@@ -209,8 +209,8 @@ class Irc < PluginBase
           begin
             i[0].call(irc, *msg)
           rescue Exception => e
-            Kernel.puts e.message
-            Kernel.puts e.backtrace.join("\n")
+            $log.puts e.message
+            $log.puts e.backtrace.join("\n")
           end
         end
       end
@@ -218,7 +218,7 @@ class Irc < PluginBase
 
 #    def reply_hook(code, *data)
 #      super(code, *data)
-#  #    Kernel::puts "[#{@name}] (#{code}) <#{data.length}> #{data.inspect}"
+#  #    $log.puts "[#{@name}] (#{code}) <#{data.length}> #{data.inspect}"
 #    end
 
   end
@@ -244,8 +244,8 @@ class Irc < PluginBase
           begin
             i[0].call(irc, *msg)
           rescue Exception => e
-            Kernel.puts e.message
-            Kernel.puts e.backtrace.join("\n")
+            $log.puts e.message
+            $log.puts e.backtrace.join("\n")
           end
         end
       end
@@ -254,24 +254,24 @@ class Irc < PluginBase
     # Called when we're connected.
     # Register with NickServ, if required.
     def on_connect
-      Kernel.puts "Connection to '#{@name}' completed."
+      $log.puts "Connection to '#{@name}' completed."
       if (ns = $config["servers/#{@name}/services/nickserv"]) and (pw = ns['password'])
         name = ns['name'] || 'NickServ'
-        Kernel.puts "Registering with #{name}..."
+        $log.puts "Registering with #{name}..."
         cmd('PRIVMSG', name, 'IDENTIFY', pw)
         cmd('PRIVMSG', name, "IDENTIFY #{pw}")
       end
     end
 
     def on_privmsg(from, message)
-      puts "#{from} told us: #{message.inspect}"
+      $log.puts "#{from} told us: #{message.inspect}"
 
       # Execute command, if authorized. (remove)
       # if (from.nick == 'cryo' or from.nick == 'cyanite') and message[0] == ?&
       #   begin
       #     eval message[1..-1]
       #   rescue Exception => e
-      #     puts "Error evaluating code: #{e.message}"
+      #     $log.puts "Error evaluating code: #{e.message}"
       #   end
       # end
 
@@ -346,7 +346,7 @@ class Irc < PluginBase
         rescue User::SecurityError => e
           irc.reply e.message
         rescue Exception => e
-          Kernel.puts e.message
+          $log.puts e.message
         end
 
       end
@@ -354,7 +354,7 @@ class Irc < PluginBase
     end
 
     def on_notice(from, message)
-      puts "#{from} noted: #{message}"
+      $log.puts "#{from} noted: #{message}"
       call_hooks(:notice_priv, from, message)
     end
 

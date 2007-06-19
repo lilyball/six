@@ -167,7 +167,7 @@ class Channel
     @modes = 0
     @limit = 0
     @booting = true
-    Kernel::puts "Channel joined: #{channel_name}"
+    $log.puts "Channel joined: #{channel_name}"
 
     # Issue some commands.
     server.cmd('MODE', channel_name)
@@ -244,14 +244,14 @@ class Channel
     if (u = @users.delete(from.nnick))
       u.nick = to
       @users[u.nnick] = u
-#      Kernel.puts "Nick change in #{@name}: #{from.nick} => #{to}"
-#      Kernel.puts @users.keys.join(', ')
+#      $log.puts "Nick change in #{@name}: #{from.nick} => #{to}"
+#      $log.puts @users.keys.join(', ')
     end
   end
 
   # Debug thingie.
   def dump_users
-    Kernel::puts("-- Users: " + @users.keys.map { |k| "#{k} (#{@users[k].modes})" }.join(', '))
+    $log.puts("-- Users: " + @users.keys.map { |k| "#{k} (#{@users[k].modes})" }.join(', '))
   end
 
   # Part the channel, with an optional reason.
@@ -480,7 +480,7 @@ class Channel
     # (Partial) channel modes.
     when Server::Rpl::ChannelModes
       parse_modes(data[1..-1])
-      Kernel::puts("==> Modes for #{@name}: #{@modes}")
+      $log.puts("==> Modes for #{@name}: #{@modes}")
 
     # Who list. Collect like NAMES.
     when Server::Rpl::WhoList
@@ -600,8 +600,8 @@ class Server
       begin
         recv_main
       rescue Exception => e
-        puts e.message
-        puts e.backtrace.join("\n")
+        $log.puts e.message
+        $log.puts e.backtrace.join("\n")
       end
     end
   end
@@ -787,7 +787,7 @@ class Server
     else
 
       # Major debug spam.
-#      Kernel.puts "irc> #{from.mask} #{cmd} #{name} #{data.join(' ') if data}"
+#      $log.puts "irc> #{from.mask} #{cmd} #{name} #{data.join(' ') if data}"
 
       nname = Address.normalize(name)
       handled = case cmd
@@ -869,7 +869,7 @@ class Server
     line << ' ' << (options[0...-1].join ' ') if options.length > 1
     line << ' :' << options[-1].to_s if options.length > 0
     send line
-#    Kernel.puts "->- #{line}"
+#    $log.puts "->- #{line}"
   end
 
   # Request disconnection from the server.
@@ -1015,7 +1015,7 @@ private
     line = command
     line << ' ' << (options[0...-1].join ' ') if options.length > 1
     line << ' :' << options[-1].to_s if options.length > 0
-    puts '>>> ' + line
+    $log.puts '>>> ' + line
     send line
   end
 
@@ -1108,7 +1108,7 @@ private
             process_command(line)
           end
         rescue SocketError => e
-          Kernel.puts "Terminating server on '#{@host}:#{@port}' due to socket error: #{e.message}"
+          $log.puts "Terminating server on '#{@host}:#{@port}' due to socket error: #{e.message}"
           @state = State::Failed
           raise
         end
@@ -1117,13 +1117,13 @@ private
       rescue SocketError => e
         unless @state == State::Failed
           @state = State::Failed
-          Kernel.puts "Error connecting to '#{@host}:#{@port}': #{e.message}"
+          $log.puts "Error connecting to '#{@host}:#{@port}': #{e.message}"
         end
       rescue Exception => e
         unless @state == State::Failed
           @state = State::Failed
-          Kernel.puts e.message
-          Kernel.puts e.backtrace.join("\n")
+          $log.puts e.message
+          $log.puts e.backtrace.join("\n")
         end
 
       ensure

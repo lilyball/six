@@ -156,8 +156,8 @@ class Phrases < PluginBase
       end
       return true
     rescue Exception => e
-      Kernel.puts e.message
-      Kernel.puts e.backtrace.join("\n")
+      $log.puts e.message
+      $log.puts e.backtrace.join("\n")
     end
     false
   end

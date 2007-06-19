@@ -600,10 +600,10 @@ class User < PluginBase
         if u == true: s[new_nn] = nn
         else          s[new_nn] = (new_nn == u) ? true : u
         end
-        Kernel.puts "User #{on} changed nick to #{args[0]} (tracking)."
+        $log.puts "User #{on} changed nick to #{args[0]} (tracking)."
         s.delete(nn)
       else
-        Kernel.puts "User #{on} has left (nick name change)."
+        $log.puts "User #{on} has left (nick name change)."
         irc.from.nick = new_nn
         lost_user(irc, s, nn, u)
         irc.from.nick = on
@@ -611,12 +611,12 @@ class User < PluginBase
 
     when 'QUIT'
       return unless (u = s[nn = irc.from.nnick])
-      Kernel.puts "User #{nn} has left (quit)."
+      $log.puts "User #{nn} has left (quit)."
       lost_user(irc, s, nn, u)
 
     when 'KILL'
       return unless (u = s[nn = IRC::Address.normalize(args[0])])
-      Kernel.puts "User #{nn} has left (kill)."
+      $log.puts "User #{nn} has left (kill)."
       lost_user(irc, s, nn, u)
 
     end
@@ -706,7 +706,7 @@ class User < PluginBase
       if auth >= 3 and users['masks'].include_mask?(user.mask)
         (@serv[server_name] = (s = {})) unless s
         seen_user(irc, s, nnick)
-        Kernel.puts "User #{nick_name} has been recognized!"
+        $log.puts "User #{nick_name} has been recognized!"
         join_actions(irc, nnick, bot_join)
         return
       end
@@ -758,7 +758,7 @@ class User < PluginBase
       return if chan.users.keys.include?(nick)
     end
     lost_user(irc, s, nick, u)
-    Kernel.puts "User #{nick} has left."
+    $log.puts "User #{nick} has left."
   end
 
   # Channel command hook so we can watch JOIN, PART, KICK and QUITs.
@@ -802,7 +802,7 @@ class User < PluginBase
             old_from = irc.from
             irc.from = IRC::Address.new(mask, server)
             seen_user(irc, serv, nick_name)
-            Kernel.puts "User #{nick_name} has been recognized via NickServ WHOIS (server: #{sn})!"
+            $log.puts "User #{nick_name} has been recognized via NickServ WHOIS (server: #{sn})!"
             global_actions(irc, nil, s[3])
             irc.from = old_from
 
@@ -870,7 +870,7 @@ class User < PluginBase
         nick = u unless u == true
       elsif users and (user = users[nick]) and
         user['auth'] == 'hostmask' and user['masks'].include_mask?(irc_user.mask)
-        Kernel.puts "On-the-fly auth for user #{nick}."
+        $log.puts "On-the-fly auth for user #{nick}."
         u = true
       end
 

@@ -38,14 +38,14 @@ class Scribe < PluginBase
   def load
     begin
       Dir[file_name('*.notes')].each do |n|
-        Kernel.puts "Note file: #{n}"
+        $log.puts "Note file: #{n}"
         bn = File.basename(n)
         i = bn.rindex ?.
         @notes[bn[0...i]] = YAML.load_file(n)
       end
     rescue Exception => e
-      Kernel.puts e.message
-      Kernel.puts e.backtrace.join("\n")
+      $log.puts e.message
+      $log.puts e.backtrace.join("\n")
     end
   end
   def save
@@ -58,8 +58,8 @@ class Scribe < PluginBase
         end
       end
     rescue Exception => e
-      Kernel.puts e.message
-      Kernel.puts e.backtrace.join("\n")
+      $log.puts e.message
+      $log.puts e.backtrace.join("\n")
     end
   end
 

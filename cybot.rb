@@ -7,11 +7,15 @@ $version = "0.2"
 
 
 # Some modules we need.
-puts "CyBot v#{$version} starting up..."
 require 'thread'
 require 'pluginbase'
 require 'configspace/configspace'
+require 'lib/logging'
 
+# Create a log instance
+$log = Logging.new
+
+$log.puts "CyBot v#{$version} starting up..."
 
 # =====================
 # = Plugin management =
@@ -44,17 +48,17 @@ def load_plugin(name)
       # Initialize it.
       ins = klass.shared_instance
       $plugins[ins.name] = ins
-      puts "Core plugin '#{ins.name.capitalize}' loaded."
+      $log.puts "Core plugin '#{ins.name.capitalize}' loaded."
 
     else
-      puts "Error loading core plugin '#{n.capitalize}':"
-      puts "Couldn't locate plugin class."
+      $log.puts "Error loading core plugin '#{n.capitalize}':"
+      $log.puts "Couldn't locate plugin class."
     end
 
   rescue Exception => e
-    puts "Error loading core plugin '#{n.capitalize}':"
-    puts e.message
-    puts e.backtrace.join("\n")
+    $log.puts "Error loading core plugin '#{n.capitalize}':"
+    $log.puts e.message
+    $log.puts e.backtrace.join("\n")
   end
 
 end
@@ -82,17 +86,17 @@ EOS
 @save_all_mutex = Mutex.new
 def save_all(quiet = false)
   @save_all_mutex.synchronize do
-    puts 'Saving plugin data...' unless quiet
+    $log.puts 'Saving plugin data...' unless quiet
     $plugins.each do |n,p|
       begin
-        print "  #{n}... " unless quiet
+        $log.print "      #{n}... " unless quiet
         p.save
-        puts "Ok" unless quiet
+        $log.puts "Ok" unless quiet
       rescue Exception => e
-        puts "Failed with error: #{e.message}" unless quiet
+        $log.puts "Failed with error: #{e.message}" unless quiet
       end
     end
-    puts 'Saving global configuration...' unless quiet
+    $log.puts 'Saving global configuration...' unless quiet
     $config.save
   end
 end
@@ -100,8 +104,8 @@ end
 # Handler on ctrl-c at this point.
 Signal.trap 'INT' do
   Signal.trap 'INT', 'DEFAULT'
-  puts 'Shutdown in progress. Press ctrl-c again to abort immediately.'
-  puts 'Asking IRC handlers to quit...'
+  $log.puts 'Shutdown in progress. Press ctrl-c again to abort immediately.'
+  $log.puts 'Asking IRC handlers to quit...'
   IRC::Server.quit('Ctrl-c pressed on console...')
 end
 
@@ -121,11 +125,11 @@ Thread.new do
 end
 
 # Done. Wait for quit.
-puts 'Startup complete!'
+$log.puts 'Startup complete!'
 IRC::Server.wait
 
 # Tell all plugins to save, and then save the main config.
-puts 'Preparing to exit...'
+$log.puts 'Preparing to exit...'
 save_all
-puts 'All done, see you next time.'
+$log.puts 'All done, see you next time.'
 
