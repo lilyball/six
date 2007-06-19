@@ -104,7 +104,8 @@ end
 # Handler on ctrl-c at this point.
 Signal.trap 'INT' do
   Signal.trap 'INT', 'DEFAULT'
-  $log.puts 'Shutdown in progress. Press ctrl-c again to abort immediately.'
+  # \n leaves the ^C on its own line, and inserts our text on the line below
+  $log.puts "\nShutdown in progress. Press ctrl-c again to abort immediately."
   $log.puts 'Asking IRC handlers to quit...'
   IRC::Server.quit('Ctrl-c pressed on console...')
 end
