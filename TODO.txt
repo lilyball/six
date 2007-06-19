@@ -32,8 +32,6 @@ Freenode:
 
 • React, maybe, to services private notices. Perhaps not needed.
 
-• Prefix log messages with current time
-
 • Give a full stack trace for caught exceptions
 
 • Support globs/patterns for $seen
@@ -54,4 +52,4 @@ Freenode:
 • Ask for a WHO list after joining a channel, to collect masks.
 • Delay calling on_init until we get that list.
 • Leading ~ apparently does NOT mean IRC Operator. Figure out what it means, and fix it.
-
+• Prefix log messages with current time

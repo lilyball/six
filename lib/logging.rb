@@ -23,6 +23,6 @@ class Logging
   
 private
   def now
-    @disable_time ? '' : Time.now.strftime('%Y-%m-%d %H:%m:%S ')
+    @disable_time ? '' : Time.now.strftime('%Y-%m-%d %H:%M:%S ')
   end
 end
