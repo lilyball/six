@@ -81,11 +81,11 @@ class Web < PluginBase
   alias_method :cmd_lucky, :cmd_google
   help :lucky, "Alias for 'google'. Type 'google?' for more information."
 
-  def cmd_wp(irc, line)
+  def cmd_define(irc, line)
 
     # Argument checks.
     if !line or line.empty?
-      irc.reply 'USAGE: wp <search string>'
+      irc.reply 'USAGE: define <search string>'
       return
     end
 
@@ -93,15 +93,16 @@ class Web < PluginBase
     Async.run(irc) do
       Net::HTTP.start('www.google.com') do |http|
         search = line.gsub(/[^a-zA-Z0-9_\.\-]/) { |s| sprintf('%%%02x', s[0]) }
-        irc.puts "/search?ie=utf8&oe=utf8&q=site%3Awikipedia.org+#{search}"
         re = http.get("/search?ie=utf8&oe=utf8&q=site%3Awikipedia.org+#{search}", 
           { 'User-Agent' => 'CyBrowser' })
         if re.code == '200'
-          if re.body =~ /<td class="j">(.+?)<br><span class=a>/
-            desc = $1.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
-            irc.reply desc
+          if re.body =~ /<td class="j">(.+?)<br><span class=a>(.+?) -/
+            desc, link = $1, $2
+            desc = desc.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
+            link = link.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
+            irc.reply desc + " ( " + link.gsub(%r[^(?!http://)], 'http://') + " )"
           elsif re.body =~ /did not match any documents/
-            irc.reply 'Nothing found.'
+            irc.reply 'No definition found.'
           else
             irc.reply "Error parsing Google output."
           end
@@ -112,5 +113,8 @@ class Web < PluginBase
     end
 
   end
+  help :define, 'Fetches a definition summary for a query from Wikipedia (using google)'
+  alias_method :cmd_define, :cmd_wp
+  help :wp, "Alias for 'define'. Type 'define?' for more information."
 end
 
