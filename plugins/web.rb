@@ -80,5 +80,37 @@ class Web < PluginBase
   help :google, 'Searches the web with Google, returning the first result.'
   alias_method :cmd_lucky, :cmd_google
   help :lucky, "Alias for 'google'. Type 'google?' for more information."
+
+  def cmd_wp(irc, line)
+
+    # Argument checks.
+    if !line or line.empty?
+      irc.reply 'USAGE: wp <search string>'
+      return
+    end
+
+    # Let's google!
+    Async.run(irc) do
+      Net::HTTP.start('www.google.com') do |http|
+        search = line.gsub(/[^a-zA-Z0-9_\.\-]/) { |s| sprintf('%%%02x', s[0]) }
+        irc.puts "/search?ie=utf8&oe=utf8&q=site%3Awikipedia.org+#{search}"
+        re = http.get("/search?ie=utf8&oe=utf8&q=site%3Awikipedia.org+#{search}", 
+          { 'User-Agent' => 'CyBrowser' })
+        if re.code == '200'
+          if re.body =~ /<td class="j">(.+?)<br><span class=a>/
+            desc = $1.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
+            irc.reply desc
+          elsif re.body =~ /did not match any documents/
+            irc.reply 'Nothing found.'
+          else
+            irc.reply "Error parsing Google output."
+          end
+        else
+          irc.reply "Google returned an error: #{re.code} #{re.message}"
+        end
+      end
+    end
+
+  end
 end
 
