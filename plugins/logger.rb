@@ -77,6 +77,8 @@ class Logger < PluginBase
         when LogNoting:   "noting: #{l[2]}"
         else              "doing something unknown :-p."
         end
+      elsif @seen.has_key?(chan.name) and metaphone = Metaphone.create_metaphone(nick) and correction = @seen[chan.name].keys.find { |name| Metaphone.create_metaphone(name) == metaphone }
+        irc.reply "I haven't seen #{nick}, perhaps you meant #{correction}?"
       else
         irc.reply "I haven't seen #{nick}."
       end
@@ -88,3 +90,40 @@ class Logger < PluginBase
 
 end
 
+class Metaphone
+  TRANSFORMATIONS = [[/\A[gkp]n/  ,  'n'],   # gn, kn, or pn at the start turns into 'n'
+                     [/\Ax/       ,  's'],   # x at the start turns into 's'
+                     [/\Awh/      ,  'w'],   # wh at the start turns into 'w'
+                     [/mb\z/      ,  'm'],   # mb at the end turns into 'm'
+                     [/sch/       ,  'sk'],  # sch sounds like 'sk'
+                     [/x/         ,  'ks'],
+                     [/cia/       ,  'xia'], # the 'c' -cia- and -ch- sounds like 'x'
+                     [/ch/        ,  'xh'],
+                     [/c([iey])/  ,  's\1'], # the 'c' -ce-, -ci-, or -cy- sounds like 's'
+                     [/ck/        ,  'k'],
+                     [/c/         ,  'k'],
+                     [/dg([eiy])/ ,  'j\1'], # the 'dg' in -dge-, -dgi-, or -dgy- sounds like 'j'
+                     [/d/         ,  't'],
+                     [/gh/        ,  ''],
+                     [/gned/      ,  'ned'],
+                     [/gn((?![aeiou])|(\z))/ ,  'n'],
+                     [/g[eiy]/    ,  'j'],
+                     [/ph/        ,  'f'],
+                     [/[aeiou]h(?![aeoiu])/ ,  '\1'], # 'h' is silent after a vowel unless it's between vowels
+                     [/q/         ,  'k'],
+                     [/s(h|(ia)|(io))/ ,  'x\1'],
+                     [/t((ia)|(io))/,  'x\1'],
+                     [/th/        ,  '0'],
+                     [/v/         ,  'f'],
+                     [/w(?![aeiou])/ ,  ''],
+                     [/y(?![aeiou])/ ,  ''],
+                     [/z/         ,  's']
+                    ]
+                    
+  def self.create_metaphone(aWord)
+    word = aWord.to_s.downcase
+    TRANSFORMATIONS.each{|transform| word.gsub!(transform.first, transform.last)}
+    'a'.upto('z'){|letter| word.gsub!(letter*2, letter)}
+    return (word[0].chr + word[1..word.length-1].gsub(/[aeiou]/, '')).upcase
+  end
+end
