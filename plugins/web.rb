@@ -114,7 +114,7 @@ class Web < PluginBase
 
   end
   help :define, 'Fetches a definition summary for a query from Wikipedia (using google)'
-  alias_method :cmd_define, :cmd_wp
+  alias_method :cmd_wp, :cmd_define
   help :wp, "Alias for 'define'. Type 'define?' for more information."
 end
 
