@@ -11,6 +11,7 @@ class Logger < PluginBase
   def initialize(*args)
     @brief_help = 'Records various channel activities.'
     @seen = {}
+    @corrections_for = {}
     super(*args)
   end
 
@@ -39,6 +40,20 @@ class Logger < PluginBase
 
   # Hook for PRIVMSGs to a channel the bot is in.
   def hook_privmsg_chan(irc, msg)
+    if @corrections_for[irc.from.nnick] and not @corrections_for[irc.from.nnick].empty?
+      if msg == 'no'
+        @corrections_for[irc.from.nnick].shift
+        if @corrections_for[irc.from.nnick].size == 1
+          irc.reply "last try: did you mean #{@corrections_for[irc.from.nnick].first.first}?"
+        elsif not @corrections_for[irc.from.nnick].empty?
+          irc.reply "did you mean #{@corrections_for[irc.from.nnick].first.first}?"
+        end
+      elsif msg == 'yes'
+        chan_seen(irc, irc.channel, @corrections_for[irc.from.nnick].first.first)
+      else
+        @corrections_for[irc.from.nnick] = nil unless msg =~ /^\$seen/
+      end
+    end
     l = @seen[cn = irc.channel.name] || (@seen[cn] = {})
     l[irc.from.nnick] = [Time.now, LogPrivmsg, msg]
   end
@@ -77,10 +92,23 @@ class Logger < PluginBase
         when LogNoting:   "noting: #{l[2]}"
         else              "doing something unknown :-p."
         end
-      elsif @seen.has_key?(chan.name) and metaphone = Metaphone.create_metaphone(nick) and correction = @seen[chan.name].keys.find { |name| Metaphone.create_metaphone(name) == metaphone }
-        irc.reply "I haven't seen #{nick}, perhaps you meant #{correction}?"
       else
-        irc.reply "I haven't seen #{nick}."
+        corrected_nick = nil
+        if @seen.has_key?("#cybot_test")
+          corrections = @seen["#cybot_test"].keys.inject({}) do |hash, name|
+            distance = edit_distance(nick, name).to_f
+            hash[name] = distance if distance <= (nick.size + name.size.to_f) / 2.0 * 0.70
+            hash
+          end.sort_by { |e| e[1] }
+          corrected_nick = corrections.first.first
+        end
+        if corrected_nick
+          irc.reply "I haven't seen #{nick}, did you mean #{corrected_nick}?"
+          @corrections_for[irc.from.nick] = corrections
+        else
+          @corrections_for[irc.from.nick] = nil
+          irc.reply "I haven't seen #{nick}."
+        end
       end
     else
       irc.reply 'USAGE: seen [channel] <nick name>'
@@ -90,40 +118,20 @@ class Logger < PluginBase
 
 end
 
-class Metaphone
-  TRANSFORMATIONS = [[/\A[gkp]n/  ,  'n'],   # gn, kn, or pn at the start turns into 'n'
-                     [/\Ax/       ,  's'],   # x at the start turns into 's'
-                     [/\Awh/      ,  'w'],   # wh at the start turns into 'w'
-                     [/mb\z/      ,  'm'],   # mb at the end turns into 'm'
-                     [/sch/       ,  'sk'],  # sch sounds like 'sk'
-                     [/x/         ,  'ks'],
-                     [/cia/       ,  'xia'], # the 'c' -cia- and -ch- sounds like 'x'
-                     [/ch/        ,  'xh'],
-                     [/c([iey])/  ,  's\1'], # the 'c' -ce-, -ci-, or -cy- sounds like 's'
-                     [/ck/        ,  'k'],
-                     [/c/         ,  'k'],
-                     [/dg([eiy])/ ,  'j\1'], # the 'dg' in -dge-, -dgi-, or -dgy- sounds like 'j'
-                     [/d/         ,  't'],
-                     [/gh/        ,  ''],
-                     [/gned/      ,  'ned'],
-                     [/gn((?![aeiou])|(\z))/ ,  'n'],
-                     [/g[eiy]/    ,  'j'],
-                     [/ph/        ,  'f'],
-                     [/[aeiou]h(?![aeoiu])/ ,  '\1'], # 'h' is silent after a vowel unless it's between vowels
-                     [/q/         ,  'k'],
-                     [/s(h|(ia)|(io))/ ,  'x\1'],
-                     [/t((ia)|(io))/,  'x\1'],
-                     [/th/        ,  '0'],
-                     [/v/         ,  'f'],
-                     [/w(?![aeiou])/ ,  ''],
-                     [/y(?![aeiou])/ ,  ''],
-                     [/z/         ,  's']
-                    ]
-                    
-  def self.create_metaphone(aWord)
-    word = aWord.to_s.downcase
-    TRANSFORMATIONS.each{|transform| word.gsub!(transform.first, transform.last)}
-    'a'.upto('z'){|letter| word.gsub!(letter*2, letter)}
-    return (word[0].chr + word[1..word.length-1].gsub(/[aeiou]/, '')).upcase
+# http://db.cs.helsinki.fi/~jaarnial/mt/archives/000074.html
+def edit_distance(a, b)
+  return 0 if !a || !b || a == b
+  return (a.length - b.length).abs if a.length == 0 || b.length == 0
+  m = [[0]]
+  1.upto(a.length) { |i| m[i] = [i] }
+  1.upto(b.length) { |j| m[0][j] = j }
+  1.upto(a.length) do |i|
+    1.upto(b.length) do |j|
+      m[i][j] =
+        [ m[i-1][j-1] + (a[i-1] == b[j-1] ? 0 : 1),
+          m[i-1][j] + 1,
+          m[i][j-1] + 1                             ].min
+    end
   end
+  m[a.length][b.length]
 end
