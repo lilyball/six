@@ -97,8 +97,14 @@ class Irc < PluginBase
       cmd_name, line = line.split(' ', 2)
       (help = cmd_name[-1] == ??) and cmd_name.chop!
       unless (cmd = plugin.commands[cmd_name])
-        irc.reply "No '#{cmd_name}' command in the '#{plugin_name}' plugin.  Try '#{plugin_name}?'."
-        return nil
+        matches = plugin.commands.keys.select { |c| c =~ /^#{Regexp.quote cmd_name}/ }
+        if matches and matches.size == 1
+          # Unambigous prefix found
+          cmd = matches.first
+        else
+          irc.reply "No '#{cmd_name}' command in the '#{plugin_name}' plugin.  Try '#{plugin_name}?'."
+          return nil
+        end
       end
     end
     if help
