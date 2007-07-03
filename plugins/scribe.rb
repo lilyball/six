@@ -28,7 +28,9 @@ class Scribe < PluginBase
           end
         end
         if count > 0
-          irc.from.notice("You have #{un.length} unread notes (#{count} of which I haven't told you about before). Use the 'notes' command to list them.")
+          notes = "note#{'s' if un.length > 1}"
+          them  = un.length > 1 ? 'them' : 'it'
+          irc.from.notice("You have #{un.length} unread #{notes} (#{count} of which I haven't told you about before). Use the 'notes' command to list #{them}.")
         end
       end
     end
@@ -107,7 +109,8 @@ class Scribe < PluginBase
               from, date, txt = e[i - 1]
               irc.reply "Note #{i} from #{from}, sent #{seconds_to_s(now - date, irc)} ago: #{txt}"
             else
-              irc.reply "Note number out of range. You have #{e.length} unread notes."
+              notes = "note#{'s' if e.length > 1}"
+              irc.reply "Note number out of range. You have #{e.length} unread #{notes}."
             end
           rescue ArgumentError
             irc.reply "USAGE: note <number>"
@@ -123,7 +126,8 @@ class Scribe < PluginBase
     u = $user.get_nick(irc) or return
     if (s = @notes[irc.server.name]) and (s = s[IRC::Address.normalize(u)]) and !s.empty?
       i = 0
-      irc.reply "You have the following notes: #{s.map do |e|
+      notes = "note#{'s' if s.length > 1}"
+      irc.reply "You have the following #{notes}: #{s.map do |e|
         i += 1
         "[#{i}] #{e[0]} (#{seconds_to_s(Time.now.to_i - e[1], irc)} ago)"
       end.join(', ')}"
