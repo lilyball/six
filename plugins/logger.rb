@@ -94,13 +94,13 @@ class Logger < PluginBase
         end
       else
         corrected_nick = nil
-        if @seen.has_key?("#cybot_test")
-          corrections = @seen["#cybot_test"].keys.inject({}) do |hash, name|
+        if @seen.has_key?(chan.name)
+          corrections = @seen[chan.name].keys.inject({}) do |hash, name|
             distance = edit_distance(nick, name).to_f
             hash[name] = distance if distance <= (nick.size + name.size.to_f) / 2.0 * 0.70
             hash
           end.sort_by { |e| e[1] }
-          corrected_nick = corrections.first.first
+          corrected_nick = corrections.first.first if corrections
         end
         if corrected_nick
           irc.reply "I haven't seen #{nick}, did you mean #{corrected_nick}?"
