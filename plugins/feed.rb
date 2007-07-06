@@ -174,18 +174,18 @@ module FeedStuff
         end
 
         while true
-	        $log.puts Time.now.strftime('%H:%M:%S: Checking feeds…')
+          $log.puts Time.now.strftime('%H:%M:%S: Checking feeds…')
 
-	        @feeds.each do |feed|
-	          feed.unread.each do |item|
-	            out.puts item.summary
-	            item.read = true
-	          end
-	        end
+          @feeds.each do |feed|
+            feed.unread.each do |item|
+              out.puts item.summary
+              item.read = true
+            end
+          end
 
           save(filename)
 
-	        $log.puts Time.now.strftime('%H:%M:%S: Done checking feeds!')
+          $log.puts Time.now.strftime('%H:%M:%S: Done checking feeds!')
           sleep(period)
         end
       rescue Exception => e
@@ -240,7 +240,7 @@ class Feed < PluginBase
     irc.reply("Not yet implemented.")
     # FeedStuff.add(line)
   end
-	help :subscribe, "Subscribe to an RSS feed."
+  help :subscribe, "Subscribe to an RSS feed."
 
   # We want to load in the thread, so we only store the filename
   def load
