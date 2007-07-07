@@ -365,8 +365,8 @@ class PluginBase
   end
 
   def _format_time(count, unit_name)
-    number = count < X_TimeWords.length ? X_TimeWords[count-1] : count.to_s
-    unit = unit_name + (count > 1 ? "s" : "")
+    number = X_TimeWords[count-1] || count.to_s
+    unit = unit_name + (count == 1 ? "" : "s")
     return number + " " + unit
   end
 
