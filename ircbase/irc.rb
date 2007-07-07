@@ -59,7 +59,7 @@ class Address
 
   # Return the normalized nick name.
   def nnick
-    nick.downcase.tr('[]\\', '{}|')
+    Address.normalize(nick)
   end
 
   # Default string representation is just the nick name.
