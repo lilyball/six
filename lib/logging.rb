@@ -9,6 +9,7 @@ class Logging
     
   def initialize
     @disable_time = false
+    STDOUT.sync = true
   end
   
   def puts(str)

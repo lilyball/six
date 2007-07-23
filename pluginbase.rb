@@ -365,12 +365,13 @@ class PluginBase
   end
 
   def _format_time(count, unit_name)
-    number = count < X_TimeWords.length ? X_TimeWords[count-1] : count.to_s
-    unit = unit_name + (count > 1 ? "s" : "")
+    number = X_TimeWords[count-1] || count.to_s
+    unit = unit_name + (count == 1 ? "" : "s")
     return number + " " + unit
   end
 
   def seconds_to_s_fuzzy(seconds)
+    seconds = seconds.round
     return "zero seconds" if seconds == 0
     X_TimeUnits.each_index do |i|
       unit_name, unit_size = X_TimeUnits[i]
@@ -390,6 +391,7 @@ class PluginBase
   end
 
   def seconds_to_s_exact(seconds)
+    seconds = seconds.round
     s = seconds % 60
     m = (seconds /= 60) % 60
     h = (seconds /= 60) % 24
