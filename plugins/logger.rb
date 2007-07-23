@@ -11,10 +11,11 @@ class Logger < PluginBase
   def initialize(*args)
     @brief_help = 'Records various channel activities.'
     @seen = {}
+    @logs = {}
     @corrections_for = {}
     super(*args)
   end
-
+  
   # Load/save database.
   def load
     begin
@@ -29,6 +30,12 @@ class Logger < PluginBase
       YAML.dump(@seen, f)
       f.puts ''
     end
+  end
+
+  def log(channel, text)
+    @logs[channel] ||= open_file(channel + '.txt', 'a')
+    now = Time.now
+    @logs[channel].puts("[%d:%d] %s" % [now.hour, now.min, text])
   end
 
   # Log types.
@@ -55,6 +62,11 @@ class Logger < PluginBase
       end
     end
     l = @seen[cn = irc.channel.name] || (@seen[cn] = {})
+    if msg =~ /^\001ACTION (.*)\001$/
+      log(irc.channel.name, "Action: %s %s" % [irc.from.nnick, msg])
+    else
+      log(irc.channel.name, "<%s> %s" % [irc.from.nnick, msg])
+    end
     l[irc.from.nnick] = [Time.now, LogPrivmsg, msg]
   end
 
@@ -65,16 +77,19 @@ class Logger < PluginBase
 
   def hook_join_chan(irc)
     l = @seen[cn = irc.channel.name] || (@seen[cn] = {})
+    log(irc.channel.name, "%s has joined %s" % [irc.from.nnick, irc.channel.name])
     l[irc.from.nnick] = [Time.now, LogJoin]
   end
 
   def hook_part_chan(irc)
     l = @seen[cn = irc.channel.name] || (@seen[cn] = {})
+    log(irc.channel.name, "PART: " + irc.from.nnick)
     l[irc.from.nnick] = [Time.now, LogPart]
   end
 
   def hook_command_serv(irc, handled, cmd, *args)
     if cmd == 'NICK'
+      p [irc, handled, cmd, *args]
       @seen.each_value do |c|
         c[irc.from.nnick] = [Time.now, LogNick, args[0]]
       end
@@ -100,7 +115,7 @@ class Logger < PluginBase
             hash[name] = distance if distance <= (nick.size + name.size.to_f) / 2.0 * 0.70
             hash
           end.sort_by { |e| e[1] }
-          corrected_nick = corrections.first.first if corrections
+          corrected_nick = corrections.first.first if corrections and corrections.first
         end
         if corrected_nick
           irc.reply "I haven't seen #{nick}, did you mean #{corrected_nick}?"
@@ -128,7 +143,7 @@ def edit_distance(a, b)
   1.upto(a.length) do |i|
     1.upto(b.length) do |j|
       m[i][j] =
-        [ m[i-1][j-1] + (a[i-1] == b[j-1] ? 0 : 1),
+        [ m[i-1][j-1] + (a[i-1,1].downcase[0] == b[j-1,1].downcase[0] ? 0 : 1),
           m[i-1][j] + 1,
           m[i][j-1] + 1                             ].min
     end
