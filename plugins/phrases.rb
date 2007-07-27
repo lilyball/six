@@ -82,12 +82,18 @@ class Phrases < PluginBase
       return
     end
 
-    if pattern =~ %r|/(.+)/([eimnosux]*)|
+    if pattern =~ %r{\A/(.*)/([imx]*)\z}
+      transform = {
+        'i' => Regexp::IGNORECASE,
+        'x' => Regexp::EXTENDED,
+      }
       begin
-        pat = Regexp.new($1, $2.empty? ? nil : $2)
-        @phrases[pat] = text
-      rescue Exception => e
-        irc.reply "Error compiling pattern"
+        ptrn, flags = $1, $2.split(//)
+        f = flags.inject(0) { |flags, letter| flags += transform[letter] if transform.has_key? letter }
+        re = Regexp.new(ptrn, f)
+        @phrases[re] = text
+      rescue
+        irc.reply "Error compiling pattern (note: only flags i & x are allowed)"
         return
       end
     else
