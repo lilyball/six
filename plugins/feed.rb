@@ -230,6 +230,18 @@ class Feed < PluginBase
     @brief_help = 'Feeds the channel with hot news from various RSS channels'
     @filename   = nil
     @did_start  = false
+
+    $config.merge(
+      'plugins' => {
+        :dir => true,
+        'feed' => {
+          :help => 'Settings for the feed plugin.'
+          :dir => true,
+          'server' => 'The server to output feed items to.'
+          'channel' => 'The channel to output feed items to.'
+        }
+      }
+    )
     super(*args)
   end
 
@@ -243,13 +255,14 @@ class Feed < PluginBase
     true
   end
 
-  # Called for all incoming channel messages
   # We can’t start the thread before we have the irc object
   # this method seems to be the quickest way to grab it
-  def hook_privmsg_chan(irc, msg)
+  def hook_init_chan(irc)
     return if @did_start
-    FeedStuff.run(irc, @filename)
-    @did_start = true
+    if irc.server.name == $config['plugins/feed/server'] && irc.channel.nname == $config['plugins/feed/channel']
+      FeedStuff.run(irc, @filename)
+      @did_start = true
+    end
   end
 
   def cmd_subscribe(irc, line)
