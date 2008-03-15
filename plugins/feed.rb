@@ -148,11 +148,11 @@ module FeedStuff
       http://macromates.com/svnlog/bundles.rss
       http://macromates.com/textmate/screencast.rss
       http://macromates.com/textmate/changelog.rss
-      http://alterslash.org/rss_full.xml
       http://blog.grayproductions.net/xml/rss20/feed.xml
       http://theocacao.com/index.rss
       http://blog.circlesixdesign.com/feed/
       http://kevin.sb.org/xml/rss/feed.xml
+      http://ciaranwal.sh/feeds
     }
 
     defaults = uris.map { |uri| Feed.new(uri) }
