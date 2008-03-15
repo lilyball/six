@@ -89,7 +89,6 @@ class Logger < PluginBase
 
   def hook_command_serv(irc, handled, cmd, *args)
     if cmd == 'NICK'
-      p [irc, handled, cmd, *args]
       @seen.each_value do |c|
         c[irc.from.nnick] = [Time.now, LogNick, args[0]]
       end
