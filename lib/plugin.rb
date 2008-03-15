@@ -30,7 +30,7 @@ class Plugin < PluginBase
       else
         begin
           if !load_plugin(pn)
-            irc.reply "Error loading plugin '#{pn.capitalize}': File not found in plugin path."
+            $log.puts "Error loading plugin '#{pn.capitalize}': File not found in plugin path."
           elsif (klass = self.class.const_get(pn.capitalize))
             ins = klass.instance
             $plugins[ins.name] = ins
