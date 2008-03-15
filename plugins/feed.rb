@@ -235,9 +235,9 @@ class Feed < PluginBase
       'plugins' => {
         :dir => true,
         'feed' => {
-          :help => 'Settings for the feed plugin.'
+          :help => 'Settings for the feed plugin.',
           :dir => true,
-          'server' => 'The server to output feed items to.'
+          'server' => 'The server to output feed items to.',
           'channel' => 'The channel to output feed items to.'
         }
       }
