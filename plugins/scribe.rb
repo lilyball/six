@@ -127,10 +127,10 @@ class Scribe < PluginBase
     if (s = @notes[irc.server.name]) and (s = s[IRC::Address.normalize(u)]) and !s.empty?
       i = 0
       notes = "note#{'s' if s.length > 1}"
-      irc.reply "You have the following #{notes}: #{s.map do |e|
+      irc.reply "You have the following #{notes}: #{(s.map do |e|
         i += 1
         "[#{i}] #{e[0]} (#{seconds_to_s(Time.now.to_i - e[1], irc)} ago)"
-      end.join(', ')}"
+      end).join(', ')}"
     else
       irc.reply "You have no unread notes."
     end
