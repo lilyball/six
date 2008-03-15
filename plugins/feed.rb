@@ -22,6 +22,7 @@ module FeedStuff
 
       if re.kind_of? Net::HTTPSuccess
         @etag = re['ETag']
+        $log.puts "#{uri.host}: New items"
         re
       elsif re.kind_of? Net::HTTPFound
         $log.puts "#{uri.host}: Found (redirect) → " + re['Location']
@@ -167,9 +168,14 @@ module FeedStuff
       begin
         load(filename)
         @feeds.each do |feed|
-          feed.unread.each do |item|
-            $log.puts "Skip new item: #{item.title}"
-            item.read = true
+          begin
+            feed.unread.each do |item|
+              $log.puts "Skip new item: #{item.title}"
+              item.read = true
+            end
+          rescue Exception => e
+            $log.puts "*** exception while iterating feeds (#{feed})"
+            $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
           end
         end
 
@@ -177,9 +183,15 @@ module FeedStuff
           $log.puts Time.now.strftime('%H:%M:%S: Checking feeds…')
 
           @feeds.each do |feed|
-            feed.unread.each do |item|
-              out.puts item.summary
-              item.read = true
+            begin
+              feed.unread.each do |item|
+                out.puts item.summary
+                sleep(2)
+                item.read = true
+              end
+            rescue Exception => e
+              $log.puts "*** exception while iterating feeds (#{feed})"
+              $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
             end
           end
 
