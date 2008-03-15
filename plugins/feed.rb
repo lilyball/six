@@ -36,6 +36,9 @@ module FeedStuff
       elsif re.kind_of? Net::HTTPNotModified
         $log.puts "#{uri.host}: Not modified."
         nil
+      elsif re.kind_of? Net::HTTPNotFound
+        $log.puts "#{uri.host}: WARNING: Not Found."
+        nil
       else
         raise "Unknown response (#{re.code}) from #{uri_string}"
       end
@@ -110,6 +113,8 @@ module FeedStuff
         if rss = RSS::Parser.parse(body, false)
           new_items = rss.items.map { |e| Item.new(rss.channel, e, self) }
           new_items.reject! { |item| @seen.include? item.guid }
+          $log.puts "Got " + new_items.size.to_s + " new items"
+          new_items = new_items[0..5] if new_items.size > 5
           @seen.concat(new_items.map { |item| item.guid })
           @unread.concat(new_items)
         else
