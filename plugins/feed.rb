@@ -151,7 +151,7 @@ module FeedStuff
       http://blog.grayproductions.net/xml/rss20/feed.xml
       http://theocacao.com/index.rss
       http://blog.circlesixdesign.com/feed/
-      http://kevin.sb.org/xml/rss/feed.xml
+      http://kevin.sb.org/feed/
       http://ciaranwal.sh/feeds
     }
 
