@@ -15,10 +15,13 @@ class Textmate < PluginBase
   def parse_toc(text)
     res = []
     text.grep(%r{<li>\s*([\d.]+)\s*<a href='(.*?)'>(.*?)</a>}) do |line|
+      section = $1
+      url = $2
+      title = $3.gsub(%r{</?\w+>}, '')
       res << {
-        :title    => "#{$1} #{$3}",
-        :link     => "http://macromates.com/textmate/manual/#{$2}",
-        :keywords => phrase_to_keywords($3)
+        :title    => "#{section} #{title}",
+        :link     => "http://macromates.com/textmate/manual/#{url}",
+        :keywords => phrase_to_keywords(title)
       }
     end
     res
