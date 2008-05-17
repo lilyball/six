@@ -153,7 +153,9 @@ class Topic < PluginBase
 
   # Silly test command.
   def chan_list(irc, chan, line)
-    irc.reply "Da topic list!!!"
+    stuff = common(irc, chan, line) or return
+    data, t, current, undo = stuff
+    irc.reply "Topic: #{current.join(" | ")}"
   end
 
   # Read topic from channel.
