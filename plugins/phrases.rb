@@ -13,7 +13,7 @@ class Phrases < PluginBase
   # Check a message against the phrase list
   # Returns nil, or an array of the matching pattern and response text if one is found
   def find_matching_phrase(msg)
-    return nil if msg[0] == ?$ # Ignore commands
+    return nil if msg[0] == $command # Ignore commands
     @phrases.each do |(pattern, text)|
       return [pattern, text.dup] if pattern === msg
     end

@@ -125,7 +125,7 @@ class Irc < PluginBase
     def on_privmsg(from, message)
 
       # If it's for us, and checks out.
-      if message[0] == ?$ and is_alpha(message[1]) || message[1] == ??
+      if message[0] == $command and is_alpha(message[1]) || message[1] == ??
         irc = IrcWrapper.new(from, @server, self)
         cmd, cmd_name, line = $irc.get_command(irc, message[1..-1])
         if cmd

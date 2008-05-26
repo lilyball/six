@@ -5,7 +5,7 @@
 #
 # Set the version
 $version = "0.2"
-
+$command = ?$ # Make sure the ? preceeds your character.
 
 # Some modules we need.
 require 'thread'
