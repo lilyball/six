@@ -61,7 +61,9 @@ class Web < PluginBase
         re = http.get("/search?ie=utf8&oe=utf8&q=#{search}", 
           { 'User-Agent' => 'CyBrowser' })
         if re.code == '200'
-          if re.body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
+          if re.body =~ %r{alt="Clock"></td><td valign=middle>(.+?)</td>}
+            irc.reply $1.gsub('<b>', "\x02").gsub('</b>', '').decode_entities
+          elsif re.body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
             link = $1.decode_entities
             desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f").decode_entities
             irc.reply "#{link} (#{desc})"
