@@ -20,7 +20,7 @@ class Textmate < PluginBase
       title = $3.gsub(%r{</?\w+>}, '')
       res << {
         :title    => "#{section} #{title}",
-        :link     => "http://macromates.com/textmate/manual/#{url}",
+        :link     => "http://manual.macromates.com/en/#{url}",
         :keywords => phrase_to_keywords(title)
       }
     end
@@ -32,8 +32,8 @@ class Textmate < PluginBase
       irc.reply 'USAGE: doc <search string or regex>'
     else
       Async.run(irc) do
-        Net::HTTP.start('macromates.com') do |http|
-          re = http.get('/textmate/manual/',  { 'User-Agent' => 'CyBrowser' })
+        Net::HTTP.start('manual.macromates.com') do |http|
+          re = http.get('/en/',  { 'User-Agent' => 'CyBrowser' })
           if re.code == '200'
 
             search_keywords = phrase_to_keywords(line)
@@ -60,7 +60,7 @@ class Textmate < PluginBase
     res = [ ]
     text.grep(%r{<a name=["'](.*?)["'][^>]*>.*?Keywords:(.*?)</span>}) do |line|
       res << {
-        :link     => 'http://macromates.com/wiki/Main/FAQ#' + $1,
+        :link     => 'http://wiki.macromates.com/Main/FAQ#' + $1,
         :keywords => phrase_to_keywords($2)
       }
     end
@@ -72,8 +72,8 @@ class Textmate < PluginBase
       irc.reply 'USAGE: faq <search keyword(s)>'
     else
       Async.run(irc) do
-        Net::HTTP.start('macromates.com') do |http|
-          re = http.get('/wiki/Main/FAQ',  { 'User-Agent' => 'CyBrowser' })
+        Net::HTTP.start('wiki.macromates.com') do |http|
+          re = http.get('/Main/FAQ',  { 'User-Agent' => 'CyBrowser' })
           if re.code == '200'
 
             search_keywords = phrase_to_keywords(line)
