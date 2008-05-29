@@ -5,6 +5,16 @@
 # We need this for marshalling.
 require 'yaml'
 
+module YAML
+  class << self
+    unless method_defined? :load_file
+      def load_file(file)
+        YAML.load(File.read(file))
+      end
+    end
+  end
+end
+
 # Module for booleans. User types must support a 'from_str' similar to this.
 # Note we interpret 'nil' as true, since this is often used for boolean flags,
 # in which case the user typing 'set flag' means to turn it on.
