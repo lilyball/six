@@ -30,11 +30,13 @@ class Test < PluginBase
   help :echo, 'Echoes the given line right back at ya!'
 
   def chan_say(irc, chan, line)
+    return unless authed?(irc)
     chan.privmsg line
   end
   help :say, 'Makes me say the given line in the channel.'
 
   def chan_do(irc, chan, line)
+    return unless authed?(irc)
     chan.action line
   end
   help(:do, 'Makes me emote (using a CTCP action) the given text in the channel.')
