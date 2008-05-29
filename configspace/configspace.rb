@@ -151,9 +151,9 @@ class ConfigSpace
     begin
       if config_file: load(config_file)
       else @cfg = {} end
-    rescue Exception => e
-      @cfg = {}
-      @file = nil
+    rescue StandardError => e
+      $log.puts "Exception loading ConfigSpace: #{e.inspect}"
+      raise e
     end
   end
 

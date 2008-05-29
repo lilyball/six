@@ -70,7 +70,11 @@ $hooks     = {}
 $plugins   = {}
 
 # Load global configuration.
-$config = ConfigSpace.new(ARGV[0]) or return 1
+begin
+  $config = ConfigSpace.new(ARGV[0])
+rescue
+  exit 1
+end
 $config.prefix = <<EOS
 # CyBot 0.2 main configuration file. Be careful when editing this file manually,
 # as it is automatically saved run-time. On-line edit is recomended.
