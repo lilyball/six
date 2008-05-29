@@ -14,7 +14,7 @@ class Textmate < PluginBase
 
   def parse_toc(text)
     res = []
-    text.grep(%r{<li>\s*([\d.]+)\s*<a href='(.*?)'>(.*?)</a>}) do |line|
+    text.grep(%r{<li>\s*([\d.]+)\s*<a href=['"](.*?)['"]>(.*?)</a>}) do |line|
       section = $1
       url = $2
       title = $3.gsub(%r{</?\w+>}, '')
