@@ -137,5 +137,27 @@ class Scribe < PluginBase
   end
   help :notes, 'Displays a list of your currently unread notes.'
 
+  # Delete specified note
+  def cmd_delete(irc, line)
+    u = $user.get_nick(irc) or return
+    un = IRC::Address.normalize(u)
+    if !line or line.empty?
+      irc.reply "USAGE: delete <number>"
+    else
+      if (n = @notes[irc.server.name]) and (nu = n[un]) and !nu.empty?
+        num = line.to_i
+        if (1..nu.size) === num
+          nu.delete_at(num-1)
+          n.delete(nu) if un.empty?
+          irc.reply "Note #{num} deleted."
+        else
+          irc.reply "Note number out of range."
+        end
+      else
+        irc.reply "You have no unread notes."
+      end
+    end
+  end
+  help :delete, "Use 'delete <n> to delete a specific note."
 end
 
