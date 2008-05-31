@@ -484,20 +484,24 @@ class Irc < PluginBase
     end
 
     # Connect to servers in the list.
-    if (servs = $config['servers'])
+    if (servs = $config['servers']) and not servs.empty?
       servs.each do |k,v|
 
         # Figure out parameters.
-        next if !(ac = v['autoconnect']).nil? and ac == false
         host = v['host']  || k
         port = v['port']  || 6667
         nick = v['nicks'] || nicks
+        if not v.fetch('autoconnect', true)
+          $log.puts "Skipping server #{host}:#{port}"
+          next
+        end
         chan = chans.dup
         if (chan_dir = v['channels'])
           chan_dir.each { |ck,cv| chan << ck unless cv['autojoin'] == false }
         end
 
         # Connect!
+        $log.puts "Connecting to server #{host}:#{port} using nick #{nick}"
         @servers[k] = Server.new(k, host, nick,
           :port => port,
           :user => 'CyBot',
@@ -505,6 +509,8 @@ class Irc < PluginBase
         )
 
       end
+    else
+      $log.puts "Couldn't find any servers in the configspace"
     end
 
   end
