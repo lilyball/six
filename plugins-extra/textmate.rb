@@ -131,7 +131,7 @@ class Textmate < PluginBase
       end
     end
   end
-  help :howto, 'Searches the TextMate Wiki HowTo articles for the given keyword(s).'
+  help :howto, 'Searches http://wiki.macromates.com/Main/HowTo/ for the given keyword(s).'
 
   def cmd_ts(irc, line)
     if line.to_s.empty?
@@ -170,7 +170,7 @@ class Textmate < PluginBase
       end
     end
   end
-  help :ts, 'Searches the TextMate Wiki troubleshooting articles for the given keyword(s).'
+  help :ts, 'Searches http://wiki.macromates.com/Troubleshooting/HomePage/ for the given keyword(s).'
 
   def cmd_calc(irc, line)
     if line.to_s.empty?
