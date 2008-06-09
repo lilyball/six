@@ -94,6 +94,84 @@ class Textmate < PluginBase
   end
   help :faq, 'Searches the TextMate FAQ for the given keyword(s).'
 
+  def cmd_howto(irc, line)
+    if line.to_s.empty?
+    	irc.reply 'USAGE: howto <search keyword(s)>'
+    else
+      Async.run(irc) do
+      	wiki_host  = 'wiki.macromates.com'
+      	wiki_path  = '/Main/HowTo/'
+      	wiki_group = 'HowTo'
+
+      	Net::HTTP.start(wiki_host) do |http|
+      		re = http.get(wiki_path,  { 'User-Agent' => 'CyBrowser' })
+      		if re.code == '200'
+      			toc = re.body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
+      			entries = toc.map do |e|
+      				words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
+      				{	:link     => e[0],
+      					:keywords => phrase_to_keywords(words)
+      				}
+      			end
+
+      			search_keywords = phrase_to_keywords(line)
+      			matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+      			if matches.empty?
+      				irc.reply 'No matches found.'
+      			else
+      				ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+      				hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+      				irc.respond hit[:link]
+      			end
+
+      		else
+      			irc.reply "Wiki site returned an error: #{re.code} #{re.message}"
+      		end
+      	end
+      end
+    end
+  end
+  help :howto, 'Searches the TextMate Wiki HowTo articles for the given keyword(s).'
+
+  def cmd_ts(irc, line)
+    if line.to_s.empty?
+    	irc.reply 'USAGE: ts <search keyword(s)>'
+    else
+      Async.run(irc) do
+      	wiki_host  = 'wiki.macromates.com'
+      	wiki_path  = '/Troubleshooting/HomePage/'
+      	wiki_group = 'Troubleshooting'
+
+      	Net::HTTP.start(wiki_host) do |http|
+      		re = http.get(wiki_path,  { 'User-Agent' => 'CyBrowser' })
+      		if re.code == '200'
+      			toc = re.body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
+      			entries = toc.map do |e|
+      				words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
+      				{	:link     => e[0],
+      					:keywords => phrase_to_keywords(words)
+      				}
+      			end
+
+      			search_keywords = phrase_to_keywords(line)
+      			matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+      			if matches.empty?
+      				irc.reply 'No matches found.'
+      			else
+      				ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+      				hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+      				irc.respond hit[:link]
+      			end
+
+      		else
+      			irc.reply "Wiki site returned an error: #{re.code} #{re.message}"
+      		end
+      	end
+      end
+    end
+  end
+  help :ts, 'Searches the TextMate Wiki troubleshooting articles for the given keyword(s).'
+
   def cmd_calc(irc, line)
     if line.to_s.empty?
       irc.reply 'USAGE: calc <expression>. The expression must be in the bc language.'
