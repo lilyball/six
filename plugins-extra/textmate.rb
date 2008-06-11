@@ -32,6 +32,30 @@ module TMHelper
     phrase.gsub(/\b(\w+)s\b/, '\1').downcase.split(/\W/).to_set
   end
 
+  # titles is array of hashes with :link and :title keys
+  def find_title_in_titles(irc, title, titles)
+    keywords = phrase_to_keywords(title)
+    len      = keywords.length.to_f
+
+    matches  = titles.map do |e|
+      title_keywords = phrase_to_keywords(e[:title])
+      if keywords.subset? title_keywords
+        { :rank => len / title_keywords.length, :link  => e[:link] }
+      else
+        nil
+      end
+    end.reject { |e| e.nil? }.sort { |a, b| a[:rank] <=> b[:rank] }
+
+    case matches.size
+      when 0:     irc.reply "No matches found for ‘#{title}’."
+      when 1:     irc.respond matches.first[:link]
+      when 2..3:  matches.each { |e| irc.respond e[:link] }
+      else
+        irc.respond "Results 1-3 of #{matches.size} for ‘#{title}’."
+        matches[0..2].each { |e| irc.respond e[:link] }
+    end
+  end
+
   def call_with_body(irc, url)
     return unless url =~ %r{http://([^/]+)(.+)}
     host, path = $1, $2
@@ -50,68 +74,35 @@ module TMHelper
 end
 
 class Textmate < PluginBase
-
-  def parse_toc(text)
-    res = []
-    text.grep(%r{<li>\s*([\d.]+)\s*<a href=['"](.*?)['"]>(.*?)</a>}) do |line|
-      section = $1
-      url = $2
-      title = $3.gsub(%r{</?\w+>}, '')
-      res << {
-        :title    => "#{section} #{title}",
-        :link     => "http://manual.macromates.com/en/#{url}",
-        :keywords => TMHelper.phrase_to_keywords(title)
-      }
-    end
-    res
-  end
-
   def cmd_doc(irc, line)
     if line.to_s.empty?
       irc.reply 'USAGE: doc <search string or regex>'
     else
       TMHelper.call_with_body(irc, 'http://manual.macromates.com/en/') do |body|
-        search_keywords = TMHelper.phrase_to_keywords(line)
-        entries = parse_toc body
-        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-        if matches.empty?
-          irc.reply 'No matches found.'
-        else
-          ranked = matches.map { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-          irc.respond "\x02#{hit[:title]}\x0f #{hit[:link]}"
+        toc = body.scan(%r{<li>\s*([\d.]+)\s*<a href=['"](.*?)['"]>(.*?)</a>})
+        entries = toc.map do |e|
+          { :link  => 'http://manual.macromates.com/en/#' + e[1],
+            :title => e[2].gsub(%r{</?\w+>}, '')
+          }
         end
+        TMHelper.find_title_in_titles(irc, line, entries)
       end
     end
   end
   help :doc, 'Searches the TextMate manual for the given string or regex.'
-
-  def parse_faq(text)
-    res = [ ]
-    text.grep(%r{<a name=["'](.*?)["'][^>]*>.*?Keywords:(.*?)</span>}) do |line|
-      res << {
-        :link     => 'http://wiki.macromates.com/Main/FAQ#' + $1,
-        :keywords => TMHelper.phrase_to_keywords($2)
-      }
-    end
-    res
-  end
 
   def cmd_faq(irc, line)
     if line.to_s.empty?
       irc.reply 'USAGE: faq <search keyword(s)>'
     else
       TMHelper.call_with_body(irc, 'http://wiki.macromates.com/Main/FAQ') do |body|
-        search_keywords = TMHelper.phrase_to_keywords(line)
-        entries = parse_faq body
-        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-        if matches.empty?
-          irc.reply 'No matches found.'
-        else
-          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-          irc.respond hit[:link]
+        toc = body.scan(%r{<a name=["'](.*?)["'][^>]*>.*?Keywords:(.*?)</span>})
+        entries = toc.map do |e|
+          { :link  => 'http://wiki.macromates.com/Main/FAQ#' + e[0],
+            :title => e[1]
+          }
         end
+        TMHelper.find_title_in_titles(irc, line, entries)
       end
     end
   end
@@ -122,26 +113,13 @@ class Textmate < PluginBase
       irc.reply 'USAGE: howto <search keyword(s)>'
     else
       TMHelper.call_with_body(irc, 'http://wiki.macromates.com/Main/HowTo/') do |body|
-        wiki_host  = 'wiki.macromates.com'
-        wiki_group = 'HowTo'
-
-        toc = body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
+        toc = body.scan(%r{<a .*\bhref=['"](http://wiki.macromates.com/HowTo/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
         entries = toc.map do |e|
-          words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
-          { :link     => e[0],
-            :keywords => TMHelper.phrase_to_keywords(words)
+          { :link  => e[0],
+            :title => e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
           }
         end
-
-        search_keywords = TMHelper.phrase_to_keywords(line)
-        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-        if matches.empty?
-          irc.reply 'No matches found.'
-        else
-          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-          irc.respond hit[:link]
-        end
+        TMHelper.find_title_in_titles(irc, line, entries)
       end
     end
   end
@@ -152,26 +130,13 @@ class Textmate < PluginBase
       irc.reply 'USAGE: ts <search keyword(s)>'
     else
       TMHelper.call_with_body(irc, 'http://wiki.macromates.com/Troubleshooting/HomePage/') do |body|
-        wiki_host  = 'wiki.macromates.com'
-        wiki_group = 'Troubleshooting'
-
-        toc = body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
+        toc = body.scan(%r{<a .*\bhref=['"](http://wiki.macromates.com/Troubleshooting/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
         entries = toc.map do |e|
-          words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
-          { :link     => e[0],
-            :keywords => TMHelper.phrase_to_keywords(words)
+          { :link  => e[0],
+            :title => e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
           }
         end
-
-        search_keywords = TMHelper.phrase_to_keywords(line)
-        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-        if matches.empty?
-          irc.reply 'No matches found.'
-        else
-          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-          irc.respond hit[:link]
-        end
+        TMHelper.find_title_in_titles(irc, line, entries)
       end
     end
   end
@@ -192,7 +157,6 @@ class Textmate < PluginBase
     end
   end
   help :calc, "Calculates the expression given and returns the answer. The expression must be in the bc language."
-
 end
 
 if $0 == __FILE__
@@ -205,11 +169,17 @@ if $0 == __FILE__
     end
   end
 
-  tm  = Textmate.new
+  tm = Textmate.new
 
   tm.cmd_calc(IRC, '4 + 3')
   tm.cmd_doc(IRC, 'language grammar')
   tm.cmd_faq(IRC, 'remote')
   tm.cmd_howto(IRC, 'tidy')
   tm.cmd_ts(IRC, '101')
+
+  tm.cmd_doc(IRC, 'url')
+  tm.cmd_doc(IRC, 'how')
+  tm.cmd_doc(IRC, 'customizing')
+  tm.cmd_doc(IRC, 'tabs')
+  tm.cmd_doc(IRC, 'TeXt')
 end
