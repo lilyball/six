@@ -2,12 +2,30 @@
 # TextMate related stuff.
 #
 
-require 'async'
 require 'net/http'
 require 'set'
 
-class Textmate < PluginBase
+# ===============================
+# = To facilitate local testing =
+# ===============================
 
+require 'async' unless $0 == __FILE__
+
+class Async
+  def Async.run(irc)
+    yield
+  end
+end if $0 == __FILE__
+
+class PluginBase
+  def PluginBase.help(cmd, text)
+    # STDERR << "Help registered for #{cmd}: #{text}.\n"
+  end
+end if $0 == __FILE__
+
+# ===============================
+
+class Textmate < PluginBase
   def phrase_to_keywords(phrase)
     phrase.gsub(/\b(\w+)s\b/, '\1').downcase.split(/\W/).to_set
   end
@@ -190,3 +208,21 @@ class Textmate < PluginBase
 
 end
 
+if $0 == __FILE__
+  class IRC
+    class << self
+      def reply(msg)
+        STDERR << "→ " << msg << "\n"
+      end
+      alias respond reply
+    end
+  end
+
+  tm  = Textmate.new
+
+  tm.cmd_calc(IRC, '4 + 3')
+  tm.cmd_doc(IRC, 'language grammar')
+  tm.cmd_faq(IRC, 'remote')
+  tm.cmd_howto(IRC, 'tidy')
+  tm.cmd_ts(IRC, '101')
+end
