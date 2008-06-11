@@ -27,7 +27,7 @@ end if $0 == __FILE__
 
 module TMHelper
   module_function
-  
+
   def phrase_to_keywords(phrase)
     phrase.gsub(/\b(\w+)s\b/, '\1').downcase.split(/\W/).to_set
   end
@@ -81,7 +81,7 @@ class Textmate < PluginBase
       TMHelper.call_with_body(irc, 'http://manual.macromates.com/en/') do |body|
         toc = body.scan(%r{<li>\s*([\d.]+)\s*<a href=['"](.*?)['"]>(.*?)</a>})
         entries = toc.map do |e|
-          { :link  => 'http://manual.macromates.com/en/#' + e[1],
+          { :link  => 'http://manual.macromates.com/en/' + e[1].gsub(/^([^#]+)#\1$/, '\1'),
             :title => e[2].gsub(%r{</?\w+>}, '')
           }
         end
