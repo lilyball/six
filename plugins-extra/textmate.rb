@@ -25,10 +25,31 @@ end if $0 == __FILE__
 
 # ===============================
 
-class Textmate < PluginBase
+module TMHelper
+  module_function
+  
   def phrase_to_keywords(phrase)
     phrase.gsub(/\b(\w+)s\b/, '\1').downcase.split(/\W/).to_set
   end
+
+  def call_with_body(irc, url)
+    return unless url =~ %r{http://([^/]+)(.+)}
+    host, path = $1, $2
+
+    Async.run(irc) do
+      Net::HTTP.start(host) do |http|
+        re = http.get(path,  { 'User-Agent' => 'CyBrowser/1.1 (IRC bot: http://wiki.macromates.com/Cybot/)' })
+        if re.code == '200'
+          yield re.body
+        else
+          irc.reply "#{re.code} #{re.message} for #{url}"
+        end
+      end
+    end
+  end
+end
+
+class Textmate < PluginBase
 
   def parse_toc(text)
     res = []
@@ -39,7 +60,7 @@ class Textmate < PluginBase
       res << {
         :title    => "#{section} #{title}",
         :link     => "http://manual.macromates.com/en/#{url}",
-        :keywords => phrase_to_keywords(title)
+        :keywords => TMHelper.phrase_to_keywords(title)
       }
     end
     res
@@ -49,25 +70,16 @@ class Textmate < PluginBase
     if line.to_s.empty?
       irc.reply 'USAGE: doc <search string or regex>'
     else
-      Async.run(irc) do
-        Net::HTTP.start('manual.macromates.com') do |http|
-          re = http.get('/en/',  { 'User-Agent' => 'CyBrowser' })
-          if re.code == '200'
-
-            search_keywords = phrase_to_keywords(line)
-            entries = parse_toc re.body
-            matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-            if matches.empty?
-              irc.reply 'No matches found.'
-            else
-              ranked = matches.map { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-              hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-              irc.respond "\x02#{hit[:title]}\x0f #{hit[:link]}"
-            end
-
-          else
-            irc.reply "Documentation site returned an error: #{re.code} #{re.message}"
-          end
+      TMHelper.call_with_body(irc, 'http://manual.macromates.com/en/') do |body|
+        search_keywords = TMHelper.phrase_to_keywords(line)
+        entries = parse_toc body
+        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+        if matches.empty?
+          irc.reply 'No matches found.'
+        else
+          ranked = matches.map { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+          irc.respond "\x02#{hit[:title]}\x0f #{hit[:link]}"
         end
       end
     end
@@ -79,7 +91,7 @@ class Textmate < PluginBase
     text.grep(%r{<a name=["'](.*?)["'][^>]*>.*?Keywords:(.*?)</span>}) do |line|
       res << {
         :link     => 'http://wiki.macromates.com/Main/FAQ#' + $1,
-        :keywords => phrase_to_keywords($2)
+        :keywords => TMHelper.phrase_to_keywords($2)
       }
     end
     res
@@ -89,23 +101,16 @@ class Textmate < PluginBase
     if line.to_s.empty?
       irc.reply 'USAGE: faq <search keyword(s)>'
     else
-      Async.run(irc) do
-        Net::HTTP.start('wiki.macromates.com') do |http|
-          re = http.get('/Main/FAQ',  { 'User-Agent' => 'CyBrowser' })
-          if re.code == '200'
-
-            search_keywords = phrase_to_keywords(line)
-            entries = parse_faq re.body
-            matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-            if matches.empty?
-              irc.reply 'No matches found.'
-            else
-              ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-              hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-              irc.respond hit[:link]
-            end
-
-          end
+      TMHelper.call_with_body(irc, 'http://wiki.macromates.com/Main/FAQ') do |body|
+        search_keywords = TMHelper.phrase_to_keywords(line)
+        entries = parse_faq body
+        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+        if matches.empty?
+          irc.reply 'No matches found.'
+        else
+          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+          irc.respond hit[:link]
         end
       end
     end
@@ -114,38 +119,29 @@ class Textmate < PluginBase
 
   def cmd_howto(irc, line)
     if line.to_s.empty?
-    	irc.reply 'USAGE: howto <search keyword(s)>'
+      irc.reply 'USAGE: howto <search keyword(s)>'
     else
-      Async.run(irc) do
-      	wiki_host  = 'wiki.macromates.com'
-      	wiki_path  = '/Main/HowTo/'
-      	wiki_group = 'HowTo'
+      TMHelper.call_with_body(irc, 'http://wiki.macromates.com/Main/HowTo/') do |body|
+        wiki_host  = 'wiki.macromates.com'
+        wiki_group = 'HowTo'
 
-      	Net::HTTP.start(wiki_host) do |http|
-      		re = http.get(wiki_path,  { 'User-Agent' => 'CyBrowser' })
-      		if re.code == '200'
-      			toc = re.body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
-      			entries = toc.map do |e|
-      				words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
-      				{	:link     => e[0],
-      					:keywords => phrase_to_keywords(words)
-      				}
-      			end
+        toc = body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
+        entries = toc.map do |e|
+          words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
+          { :link     => e[0],
+            :keywords => TMHelper.phrase_to_keywords(words)
+          }
+        end
 
-      			search_keywords = phrase_to_keywords(line)
-      			matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-      			if matches.empty?
-      				irc.reply 'No matches found.'
-      			else
-      				ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-      				hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-      				irc.respond hit[:link]
-      			end
-
-      		else
-      			irc.reply "Wiki site returned an error: #{re.code} #{re.message}"
-      		end
-      	end
+        search_keywords = TMHelper.phrase_to_keywords(line)
+        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+        if matches.empty?
+          irc.reply 'No matches found.'
+        else
+          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+          irc.respond hit[:link]
+        end
       end
     end
   end
@@ -153,38 +149,29 @@ class Textmate < PluginBase
 
   def cmd_ts(irc, line)
     if line.to_s.empty?
-    	irc.reply 'USAGE: ts <search keyword(s)>'
+      irc.reply 'USAGE: ts <search keyword(s)>'
     else
-      Async.run(irc) do
-      	wiki_host  = 'wiki.macromates.com'
-      	wiki_path  = '/Troubleshooting/HomePage/'
-      	wiki_group = 'Troubleshooting'
+      TMHelper.call_with_body(irc, 'http://wiki.macromates.com/Troubleshooting/HomePage/') do |body|
+        wiki_host  = 'wiki.macromates.com'
+        wiki_group = 'Troubleshooting'
 
-      	Net::HTTP.start(wiki_host) do |http|
-      		re = http.get(wiki_path,  { 'User-Agent' => 'CyBrowser' })
-      		if re.code == '200'
-      			toc = re.body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
-      			entries = toc.map do |e|
-      				words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
-      				{	:link     => e[0],
-      					:keywords => phrase_to_keywords(words)
-      				}
-      			end
+        toc = body.scan(%r{<a .*\bhref=['"](http://#{wiki_host}/#{wiki_group}/(?!HomePage|RecentChanges).+)['"][^>]*>(.*?)</a>})
+        entries = toc.map do |e|
+          words = e[1].gsub(/([A-Z]+)([A-Z][a-z])/,'\1 \2').gsub(/([a-z\d])([A-Z])/,'\1 \2')
+          { :link     => e[0],
+            :keywords => TMHelper.phrase_to_keywords(words)
+          }
+        end
 
-      			search_keywords = phrase_to_keywords(line)
-      			matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
-      			if matches.empty?
-      				irc.reply 'No matches found.'
-      			else
-      				ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
-      				hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
-      				irc.respond hit[:link]
-      			end
-
-      		else
-      			irc.reply "Wiki site returned an error: #{re.code} #{re.message}"
-      		end
-      	end
+        search_keywords = TMHelper.phrase_to_keywords(line)
+        matches = entries.find_all { |m| search_keywords.subset? m[:keywords] }
+        if matches.empty?
+          irc.reply 'No matches found.'
+        else
+          ranked = matches.collect { |m| m.merge({ :rank => search_keywords.length.to_f / m[:keywords].length }) }
+          hit = ranked.max { |a, b| a[:rank] <=> b[:rank] }
+          irc.respond hit[:link]
+        end
       end
     end
   end
