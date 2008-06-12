@@ -6,6 +6,24 @@ require "uri"
 require 'cgi'
 require "yaml"
 
+class Exception
+  def self.pretty(e)
+    str = "#{e.class.name}: #{e.message.sub(/`(\w+)'/, '‘\1’').sub(/ -- /, ' — ')}\n\n"
+
+    e.backtrace.each do |b|
+      if b =~ /(.*?):(\d+)(?::in\s*`(.*?)')?/ then
+        file, line, method = $1, $2, $3
+        display_name = File.basename(file)
+        str << "At line #{line} in ‘#{display_name}’ "
+        str << (method ? "(inside method ‘#{method}’)" : "(top level)")
+        str << "\n"
+      end
+    end
+
+    str
+  end
+end
+
 module FeedStuff
   class Resource
     def initialize(uri_string, etag = nil)
@@ -49,7 +67,7 @@ module FeedStuff
         end
       rescue Exception => e
         $log.puts "*** network error"
-        $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
+        $log.puts Exception.pretty(e)
       end
       nil
     end
@@ -178,7 +196,7 @@ module FeedStuff
             end
           rescue Exception => e
             $log.puts "*** exception while iterating feeds (#{feed})"
-            $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
+            $log.puts Exception.pretty(e)
           end
         end
 
@@ -194,7 +212,7 @@ module FeedStuff
               end
             rescue Exception => e
               $log.puts "*** exception while iterating feeds (#{feed})"
-              $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
+              $log.puts Exception.pretty(e)
             end
           end
 
@@ -205,7 +223,7 @@ module FeedStuff
         end
       rescue Exception => e
         $log.puts "*** thread error"
-        $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
+        $log.puts Exception.pretty(e)
       end
     end
   end
