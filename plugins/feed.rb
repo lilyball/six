@@ -6,8 +6,6 @@ require "uri"
 require 'cgi'
 require "yaml"
 
-# $log = STDERR
-
 module FeedStuff
   class Resource
     def initialize(uri_string, etag = nil)
@@ -210,7 +208,6 @@ module FeedStuff
         $log.puts "#{e.message}\n#{e.backtrace.join("\n")}"
       end
     end
-    # tr.join
   end
 
   def add(uri)
@@ -218,8 +215,13 @@ module FeedStuff
   end
 end
 
-# FeedStuff.run
-# sleep(10*60)
+if $0 == __FILE__
+
+  $log = STDERR
+  tr = FeedStuff.run
+  tr.join
+
+else
 
 # ===================
 # = Cybot Interface =
@@ -276,4 +278,6 @@ class Feed < PluginBase
   def load
     @filename = File.expand_path(file_name('feeds.yml'))
   end
+end
+
 end
