@@ -26,6 +26,7 @@ end
 
 module FeedStuff
   class Resource
+    attr_reader :uri_string
     def initialize(uri_string, etag = nil)
       @uri_string = uri_string
       @etag       = etag
@@ -115,6 +116,16 @@ module FeedStuff
 
         prefix + body + suffix
       end
+
+      attr_reader :item
+      def <=>(other)
+        # as of Ruby 1.8.6 the RSS library only reads pubDate, not dc::date
+        if @item.date and other.item.date
+          @item.date <=> other.item.date
+        else
+          @item.date ? 1 : (other.item.date ? -1 : 0)
+        end
+      end
     end
 
     def initialize(uri_string, etag = nil, last_check = nil, seen = [])
@@ -130,7 +141,6 @@ module FeedStuff
           new_items = rss.items.map { |e| Item.new(rss.channel, e, self) }
           new_items.reject! { |item| @seen.include? item.guid }
           $log.puts "Got " + new_items.size.to_s + " new items"
-          new_items = new_items[0..5] if new_items.size > 5
           @seen.concat(new_items.map { |item| item.guid })
           @unread.concat(new_items)
         else
@@ -138,6 +148,8 @@ module FeedStuff
         end
       end
       @last_check = Time.now
+      @unread.sort!
+      @unread = @unread[-5..-1] if @unread.size > 5
       @unread.dup
     end
 
@@ -149,6 +161,10 @@ module FeedStuff
       res = { 'seen' => @seen }
       res['last_check'] = @last_check unless @last_check.nil?
       res.merge(@ressource.save)
+    end
+
+    def to_s
+      @ressource.uri_string
     end
   end
 
@@ -189,17 +205,6 @@ module FeedStuff
     tr = Thread.new do
       begin
         load(filename)
-        @feeds.each do |feed|
-          begin
-            feed.unread.each do |item|
-              $log.puts "Skip new item: #{item.title}"
-              item.read = true
-            end
-          rescue Exception => e
-            $log.puts "*** exception while iterating feeds (#{feed})"
-            $log.puts Exception.pretty(e)
-          end
-        end
 
         while true
           $log.puts Time.now.strftime('%H:%M:%S: Checking feeds…')
