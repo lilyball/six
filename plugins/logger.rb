@@ -97,7 +97,9 @@ class Logger < PluginBase
 
   def chan_seen(irc, chan, nick)
     if nick
-      if l = @seen[chan.name] and l = l[IRC::Address.normalize(nick)]
+      if irc.from.nick.casecmp(nick) == 0
+        irc.reply "You were last seen right now, talking to me."
+      elsif l = @seen[chan.name] and l = l[IRC::Address.normalize(nick)]
         irc.reply "#{nick} was last seen #{seconds_to_s((Time.now - l[0]).to_i, irc)} ago, " + case l[1]
         when LogJoin:     "joining."
         when LogPart:     "leaving."
