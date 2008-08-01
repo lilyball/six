@@ -66,6 +66,7 @@ class Web < PluginBase
           elsif re.body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
             link = $1.decode_entities
             desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f").decode_entities
+            desc.gsub!(/<.*?>/, '') # strip tags
             irc.reply "#{link} (#{desc})"
           elsif re.body =~ /did not match any documents/
             irc.reply 'Nothing found.'
