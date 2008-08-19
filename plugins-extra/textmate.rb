@@ -44,7 +44,7 @@ module TMHelper
       else
         nil
       end
-    end.reject { |e| e.nil? }.sort { |a, b| a[:rank] <=> b[:rank] }
+    end.compact.sort { |a, b| b[:rank] <=> a[:rank] }
 
     case matches.size
       when 0:     irc.reply "No matches found for ‘#{title}’."
