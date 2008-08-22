@@ -205,10 +205,12 @@ class Textmate < PluginBase
 
   def cmd_bundle(irc, line)
     return irc.reply('USAGE: bundle <search keyword(s)>') if line.to_s.empty?
-    if bundle = TMHelper.find_bundle(irc, line)
-      irc.reply "#{bundle['url']} (#{bundle['name']})"
-    else
-      irc.reply "Nothing found for #{line.inspect}."
+    Async.run(irc) do
+      if bundle = TMHelper.find_bundle(irc, line)
+        irc.reply "#{bundle['url']} (#{bundle['name']})"
+      else
+        irc.reply "Nothing found for #{line.inspect}."
+      end
     end
   end
   help :bundle, "Searches for a bundle in the Subversion repository, GitHub and Google."
