@@ -6,6 +6,7 @@ require 'net/http'
 require 'set'
 require 'yaml'
 require "cgi"
+require "open-uri"
 
 # ===============================
 # = To facilitate local testing =
@@ -83,8 +84,8 @@ module TMHelper
   def find_bundle(irc, keyword)
     # subversion
     [:main, :review].each do |src|
-      call_with_body(irc, BUNDLE_SOURCES[src]) do |body|
-        next unless bundles = body.scan(%r{<li>\s*<a href=['"](.*?)['"]>.*?</a>})
+      open(BUNDLE_SOURCES[src]) do |io|
+        next unless bundles = io.read.scan(%r{<li>\s*<a href=['"](.*?)['"]>.*?</a>})
 
         if found = bundles.flatten.find { |e| e =~ /#{keyword}.*?\.tmbundle/i }
           return {'name' => CGI.unescape(found[/(.+)\.tmbundle/, 1].to_s), 'url' => "#{BUNDLE_SOURCES[src]}#{found}"}
@@ -93,8 +94,8 @@ module TMHelper
     end
 
     # github
-    call_with_body(irc, 'http://github.com/api/v1/yaml/search/tmbundle') do |body|
-      return unless repos = YAML.load(body)
+    open('http://github.com/api/v1/yaml/search/tmbundle') do |io|
+      return unless repos = YAML.load(io.read)
       found = repos['repositories'].find { |result| result['name'].match(/#{keyword}/i) }
       return found if found
     end
@@ -102,9 +103,9 @@ module TMHelper
     # try google
     keyword = "#{keyword} textmate bundle"
 
-    call_with_body(irc, "http://www.google.com/search?ie=utf8&oe=utf8&q=#{CGI.escape keyword}") do |body|
+    open("http://www.google.com/search?ie=utf8&oe=utf8&q=#{CGI.escape keyword}") do |io|
       # the google search code should be moved some place it can be shared among plugins.
-      return unless body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
+      return unless io.read =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
       link = $1
       desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f")
       desc.gsub!(/<.*?>/, '')
