@@ -95,9 +95,10 @@ module TMHelper
 
     # github
     open('http://github.com/api/v1/yaml/search/tmbundle') do |io|
-      return unless repos = YAML.load(io.read)
-      found = repos['repositories'].find { |result| result['name'].match(/#{keyword}/i) }
-      return found if found
+      if repos = YAML.load(io.read)
+        found = repos['repositories'].find { |result| result['name'].match(/#{keyword}/i) }
+        return found if found
+      end
     end
 
     # try google
@@ -105,13 +106,15 @@ module TMHelper
 
     open("http://www.google.com/search?ie=utf8&oe=utf8&q=#{CGI.escape keyword}") do |io|
       # the google search code should be moved some place it can be shared among plugins.
-      return unless io.read =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
-      link = $1
-      desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f")
-      desc.gsub!(/<.*?>/, '')
-      return {'name' => CGI.unescapeHTML(desc), 'url' => link }
+      if io.read =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
+        link = $1
+        desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f")
+        desc.gsub!(/<.*?>/, '')
+        return {'name' => CGI.unescapeHTML(desc), 'url' => link }
+      end
     end
-
+    
+    return nil
   rescue => e
     $log.puts "Error while searching for bundle: #{e.message}"
     $log.puts e.backtrace.join("\n")
@@ -234,13 +237,13 @@ if $0 == __FILE__
   tm.cmd_faq(IRC, 'remote')
   tm.cmd_howto(IRC, 'tidy')
   tm.cmd_ts(IRC, '101')
-
+  
   tm.cmd_doc(IRC, 'url')
   tm.cmd_doc(IRC, 'how')
   tm.cmd_doc(IRC, 'customizing')
   tm.cmd_doc(IRC, 'tabs')
   tm.cmd_doc(IRC, 'TeXt')
-
+  
   tm.cmd_bundle(IRC, "haml")
   tm.cmd_bundle(IRC, "Maude")
   tm.cmd_bundle(IRC, 'datamapper')
