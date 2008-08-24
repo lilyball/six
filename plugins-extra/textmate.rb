@@ -46,7 +46,7 @@ module TMHelper
     keywords = phrase_to_keywords(title)
     len      = keywords.length.to_f
 
-    matches  = titles.map do |e|
+    matches = titles.map do |e|
       title_keywords = phrase_to_keywords(e[:title])
       if keywords.subset? title_keywords
         { :rank => len / title_keywords.length, :link  => e[:link] }
@@ -55,13 +55,15 @@ module TMHelper
       end
     end.compact.sort { |a, b| b[:rank] <=> a[:rank] }
 
+    return yield(matches) if block_given?
+
     case matches.size
-      when 0:     irc.reply "No matches found for ‘#{title}’."
-      when 1:     irc.respond matches.first[:link]
-      when 2..3:  matches.each { |e| irc.respond e[:link] }
-      else
-        irc.respond "Results 1-3 of #{matches.size} for ‘#{title}’."
-        matches[0..2].each { |e| irc.respond e[:link] }
+    when 0:     irc.reply "No matches found for ‘#{title}’."
+    when 1:     irc.respond matches.first[:link]
+    when 2..3:  matches.each { |e| irc.respond e[:link] }
+    else
+      irc.respond "Results 1-3 of #{matches.size} for ‘#{title}’."
+      matches[0..2].each { |e| irc.respond e[:link] }
     end
   end
 
@@ -82,39 +84,54 @@ module TMHelper
   end
 
   def find_bundle(irc, keyword)
+    reply = proc do |matches| 
+      unless matches.empty?
+        irc.reply(matches.first[:link])
+        true
+      end
+    end
+    
     # subversion
     [:main, :review].each do |src|
       open(BUNDLE_SOURCES[src]) do |io|
         next unless bundles = io.read.scan(%r{<li>\s*<a href=['"](.*?)['"]>.*?</a>})
 
-        if found = bundles.flatten.find { |e| e =~ /#{keyword}.*?\.tmbundle/i }
-          return {'name' => CGI.unescape(found[/(.+)\.tmbundle/, 1].to_s), 'url' => "#{BUNDLE_SOURCES[src]}#{found}"}
+        bundles = bundles.flatten.map do |e|
+          { :title => CGI.unescape(e[/(.+)\.tmbundle/, 1].to_s),
+            :link  => "#{BUNDLE_SOURCES[src]}#{e}" }
         end
+        # p :bundles => bundles
+        return if find_title_in_titles(irc, keyword, bundles, &reply)
       end
     end
 
     # github
     open('http://github.com/api/v1/yaml/search/tmbundle') do |io|
       if repos = YAML.load(io.read)
-        found = repos['repositories'].find { |result| result['name'].match(/#{keyword}/i) }
-        return found if found
+        bundles = repos['repositories'].map do |e|
+          { :title => e['name'],
+            :link  => e['url'] }
+        end
+        # p :bundles => bundles
+        return if find_title_in_titles(irc, keyword, bundles, &reply)
       end
     end
 
     # try google
-    keyword = "#{keyword} textmate bundle"
-
-    open("http://www.google.com/search?ie=utf8&oe=utf8&q=#{CGI.escape keyword}") do |io|
+    query = CGI.escape("#{keyword} textmate bundle")
+    open("http://www.google.com/search?ie=utf8&oe=utf8&q=#{query}") do |io|
       # the google search code should be moved some place it can be shared among plugins.
       if io.read =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
         link = $1
         desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f")
         desc.gsub!(/<.*?>/, '')
-        return {'name' => CGI.unescapeHTML(desc), 'url' => link }
+
+        irc.reply "#{link} (#{CGI.unescapeHTML desc})"
+      else
+        irc.reply "Nothing found for #{keyword.inspect}"
       end
     end
-    
-    return nil
+
   rescue => e
     $log.puts "Error while searching for bundle: #{e.message}"
     $log.puts e.backtrace.join("\n")
@@ -208,13 +225,7 @@ class Textmate < PluginBase
 
   def cmd_bundle(irc, line)
     return irc.reply('USAGE: bundle <search keyword(s)>') if line.to_s.empty?
-    Async.run(irc) do
-      if bundle = TMHelper.find_bundle(irc, line)
-        irc.reply "#{bundle['url']} (#{bundle['name']})"
-      else
-        irc.reply "Nothing found for #{line.inspect}."
-      end
-    end
+    Async.run(irc) { TMHelper.find_bundle(irc, line) }
   end
   help :bundle, "Searches for a bundle in the Subversion repository, GitHub and Google."
 
@@ -237,16 +248,17 @@ if $0 == __FILE__
   tm.cmd_faq(IRC, 'remote')
   tm.cmd_howto(IRC, 'tidy')
   tm.cmd_ts(IRC, '101')
-  
+
   tm.cmd_doc(IRC, 'url')
   tm.cmd_doc(IRC, 'how')
   tm.cmd_doc(IRC, 'customizing')
   tm.cmd_doc(IRC, 'tabs')
   tm.cmd_doc(IRC, 'TeXt')
-  
-  tm.cmd_bundle(IRC, "haml")
+
+  tm.cmd_bundle(IRC, "javascript")
   tm.cmd_bundle(IRC, "Maude")
   tm.cmd_bundle(IRC, 'datamapper')
-  tm.cmd_bundle(IRC, 'foobar')
+  tm.cmd_bundle(IRC, 'github')
+  tm.cmd_bundle(IRC, 'asdadfg;kerwekj')
 
 end
