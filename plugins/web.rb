@@ -99,8 +99,8 @@ class Web < PluginBase
         re = http.get("/search?ie=utf8&oe=utf8&q=site%3Awikipedia.org+#{search}", 
           { 'User-Agent' => 'CyBrowser' })
         if re.code == '200'
-          if re.body =~ /<td class="j">(.+?)<br><span class=a>(.+?) -/
-            desc, link = $1, $2
+          if re.body =~ /<h3 class=r><a href="([^"]+)".+?<div class="s">(.+?)<b>.../
+            link, desc = $1, $2
             desc = desc.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
             link = link.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
             irc.reply desc + " ( " + link.gsub(%r[^(?!http://)], 'http://') + " )"
