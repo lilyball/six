@@ -132,6 +132,34 @@ class Logger < PluginBase
   end
   help :seen, "Type 'seen <nick>' and I'll tell you when I last heard something from <nick>, and what he or she was saying or doing."
 
+  def chan_willsee(irc, chan, nick)
+    if nick
+      hours = {}
+      open_file(chan.name + '.txt', 'r') do |log|
+        while line = log.gets
+          if line =~ /^\[(\d+):\d+\] <#{Regexp.quote nick}>/i
+            hours[$1.to_i] ||= 0
+            hours[$1.to_i] += 1
+          end
+        end
+      end
+      if hours.empty?
+        irc.reply "I haven't seen #{nick} before"
+      else
+        prediction = hours.sort_by { |x| x[1] rescue 0 }.last[0]
+        hour       = Time.now.hour
+        if hour > prediction
+          prediction = 24 - (hour - prediction);
+        else
+          prediction = prediction - hour;
+        end
+        irc.reply "#{nick} is most likely to be online " + ((prediction == 0) ? 'now!' : "in #{prediction} hour#{:s if prediction > 1}.");
+      end
+    else
+      irc.reply 'USAGE: willsee [channel] <nick name>'
+    end
+  end
+  help :willsee, 'Tries to predict when a user is likely to be online'
 end
 
 # http://db.cs.helsinki.fi/~jaarnial/mt/archives/000074.html
