@@ -30,8 +30,8 @@ end if $0 == __FILE__
 
 module TMHelper
   BUNDLE_SOURCES = {
-    :main   => "http://macromates.com/svn/Bundles/trunk/Bundles/",
-    :review => "http://macromates.com/svn/Bundles/trunk/Review/Bundles/",
+    :main   => "http://svn.textmate.org/trunk/Bundles/",
+    :review => "http://svn.textmate.org/trunk/Review/Bundles/",
     :github => 'http://github.com/api/v1/yaml/search/tmbundle'
   }
 
