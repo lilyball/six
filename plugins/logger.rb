@@ -18,12 +18,12 @@ class Logger < PluginBase
   
   # Load/save database.
   def load
-    begin
-      @seen = YAML.load_file(file_name('seen.db'))
-    rescue
-      @seen = {}
-    end
+    @seen = YAML.load_file(file_name('seen.db'))
+    @seen = {} unless @seen.is_a?(Hash)
+  rescue
+    @seen = {}
   end
+
   def save
     open_file('seen.db', 'w') do |f|
       f.puts '# CyBot logger plugin: Seen database.'
