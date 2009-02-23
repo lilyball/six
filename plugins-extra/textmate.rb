@@ -95,8 +95,8 @@ module TMHelper
     if results.empty?
       # the google search code should be moved some place it can be shared among plugins.
       uri = "http://www.google.com/search?ie=utf8&oe=utf8&q=" + CGI.escape("#{keyword} textmate bundle")
-      TMHelper.call_with_body(irc, uri) do |io|
-        if io =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
+      TMHelper.call_with_body(irc, uri) do |body|
+        if body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
           link, desc = $1, $2.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.*?>/, '')
           irc.reply "#{link} (#{CGI.unescapeHTML desc})"
         else
