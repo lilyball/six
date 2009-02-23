@@ -2,38 +2,45 @@
 # TextMate related stuff.
 #
 
+begin
+  require "rubygems"
+rescue LoadError
+end
+
+
 require 'net/http'
 require 'set'
 require 'yaml'
 require "cgi"
 require "open-uri"
+require "json"
 
 # ===============================
 # = To facilitate local testing =
 # ===============================
 
-require 'async' unless $0 == __FILE__
-
-class Async
-  def Async.run(irc)
-    yield
+if $0 == __FILE__
+  class Async
+    def Async.run(irc)
+      yield
+    end
   end
-end if $0 == __FILE__
 
-class PluginBase
-  def PluginBase.help(cmd, text)
-    # STDERR << "Help registered for #{cmd}: #{text}.\n"
+  class PluginBase
+    def PluginBase.help(cmd, text)
+      # STDERR << "Help registered for #{cmd}: #{text}.\n"
+    end
   end
-end if $0 == __FILE__
+
+  $log = STDERR
+else
+  require 'async'
+end
 
 # ===============================
 
 module TMHelper
-  BUNDLE_SOURCES = {
-    :main   => "http://svn.textmate.org/trunk/Bundles/",
-    :review => "http://svn.textmate.org/trunk/Review/Bundles/",
-    :github => 'http://github.com/api/v1/yaml/search/tmbundle'
-  }
+  GETBUNDLES_SERVICE = "http://www.bibiko.de/cgi-bin/getbundles.cgi?get=json&q="
 
   module_function
 
@@ -54,8 +61,6 @@ module TMHelper
         nil
       end
     end.compact.sort { |a, b| b[:rank] <=> a[:rank] }
-
-    return yield(matches) if block_given?
 
     case matches.size
     when 0:     irc.reply "No matches found for ‘#{title}’."
@@ -84,56 +89,30 @@ module TMHelper
   end
 
   def find_bundle(irc, keyword)
-    reply = proc do |matches| 
-      unless matches.empty?
-        irc.reply(matches.first[:link])
-        true
-      end
-    end
-    
-    # subversion
-    [:main, :review].each do |src|
-      open(BUNDLE_SOURCES[src]) do |io|
-        next unless bundles = io.read.scan(%r{<li>\s*<a href=['"](.*?)['"]>.*?</a>})
+    results = JSON[ open(GETBUNDLES_SERVICE + URI.escape(keyword)).read ]
+    return irc.reply("Unknown response (#{results.class}).") unless results.is_a?(Array)
 
-        bundles = bundles.flatten.map do |e|
-          { :title => CGI.unescape(e[/(.+)\.tmbundle/, 1].to_s),
-            :link  => "#{BUNDLE_SOURCES[src]}#{e}" }
-        end
-        # p :bundles => bundles
-        return if find_title_in_titles(irc, keyword, bundles, &reply)
-      end
-    end
-
-    # github
-    open('http://github.com/api/v1/yaml/search/tmbundle') do |io|
-      if repos = YAML.load(io.read)
-        bundles = repos['repositories'].map do |e|
-          { :title => e['name'],
-            :link  => e['url'] }
-        end
-        # p :bundles => bundles
-        return if find_title_in_titles(irc, keyword, bundles, &reply)
-      end
-    end
-
-    # try google
-    query = CGI.escape("#{keyword} textmate bundle")
-    open("http://www.google.com/search?ie=utf8&oe=utf8&q=#{query}") do |io|
+    if results.empty?
       # the google search code should be moved some place it can be shared among plugins.
-      if io.read =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
-        link = $1
-        desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f")
-        desc.gsub!(/<.*?>/, '')
-
-        irc.reply "#{link} (#{CGI.unescapeHTML desc})"
-      else
-        irc.reply "Nothing found for #{keyword.inspect}"
+      uri = "http://www.google.com/search?ie=utf8&oe=utf8&q=" + CGI.escape("#{keyword} textmate bundle")
+      TMHelper.call_with_body(irc, uri) do |io|
+        if io =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
+          link, desc = $1, $2.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.*?>/, '')
+          irc.reply "#{link} (#{CGI.unescapeHTML desc})"
+        else
+          irc.reply "Nothing found for #{keyword.inspect}"
+        end
+      end
+    else
+      results[0..2].each do |r|
+        name, url = r['name'], r['source'][0]['url']
+        irc.reply "#{name} - #{url}"
       end
     end
-
   rescue => e
-    $log.puts "Error while searching for bundle: #{e.message}"
+    msg = "Error while searching for bundle: #{e.message}"
+    irc.reply msg
+    $log.puts msg
     $log.puts e.backtrace.join("\n")
   end
 end
@@ -235,7 +214,7 @@ if $0 == __FILE__
   class IRC
     class << self
       def reply(msg)
-        STDERR << "→ " << msg << "\n"
+        STDERR.puts "→ #{msg.inspect}\n"
       end
       alias respond reply
     end
@@ -243,17 +222,17 @@ if $0 == __FILE__
 
   tm = Textmate.new
 
-  tm.cmd_calc(IRC, '4 + 3')
-  tm.cmd_doc(IRC, 'language grammar')
-  tm.cmd_faq(IRC, 'remote')
-  tm.cmd_howto(IRC, 'tidy')
-  tm.cmd_ts(IRC, '101')
-
-  tm.cmd_doc(IRC, 'url')
-  tm.cmd_doc(IRC, 'how')
-  tm.cmd_doc(IRC, 'customizing')
-  tm.cmd_doc(IRC, 'tabs')
-  tm.cmd_doc(IRC, 'TeXt')
+  # tm.cmd_calc(IRC, '4 + 3')
+  # tm.cmd_doc(IRC, 'language grammar')
+  # tm.cmd_faq(IRC, 'remote')
+  # tm.cmd_howto(IRC, 'tidy')
+  # tm.cmd_ts(IRC, '101')
+  #
+  # tm.cmd_doc(IRC, 'url')
+  # tm.cmd_doc(IRC, 'how')
+  # tm.cmd_doc(IRC, 'customizing')
+  # tm.cmd_doc(IRC, 'tabs')
+  # tm.cmd_doc(IRC, 'TeXt')
 
   tm.cmd_bundle(IRC, "javascript")
   tm.cmd_bundle(IRC, "Maude")
