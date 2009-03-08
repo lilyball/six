@@ -107,14 +107,29 @@ module TMHelper
       results[0..2].each do |r|
         name, url = r['name'], r['source'][0]['url']
         irc.reply "#{name} - #{url}"
+        sleep 0.2
       end
     end
   rescue => e
-    msg = "Error while searching for bundle: #{e.message}"
-    irc.reply msg
-    $log.puts msg
-    $log.puts e.backtrace.join("\n")
+    irc.reply msg = "Error while searching for bundle: #{e.message}"
+    $log.puts msg, e.backtrace
   end
+
+  def find_maintainer(irc, keyword)
+    results = JSON[ open(GETBUNDLES_SERVICE + URI.escape(keyword)).read ]
+    return irc.reply("Unknown response (#{results.class}).") unless results.is_a?(Array)
+
+    results[0..2].each do |r|
+      contact, status, url = r['contact'], r['status'], r['source'][0]['url']
+      irc.reply "#{contact} (#{status} - #{url})"
+      sleep 0.2
+    end
+
+  rescue => e
+    irc.reply msg = "Error while searching for bundle: #{e.message}"
+    $log.puts msg, e.backtrace
+  end
+
 end
 
 class Textmate < PluginBase
@@ -208,6 +223,11 @@ class Textmate < PluginBase
   end
   help :bundle, "Searches for a bundle in the Subversion repository, GitHub and Google."
 
+  def cmd_maintainer(irc, line)
+    return irc.reply('USAGE: maintainer <bundle keyword(s)>') if line.to_s.empty?
+    Async.run(irc) { TMHelper.find_maintainer(irc, line) }
+  end
+
 end
 
 if $0 == __FILE__
@@ -234,10 +254,13 @@ if $0 == __FILE__
   # tm.cmd_doc(IRC, 'tabs')
   # tm.cmd_doc(IRC, 'TeXt')
 
-  tm.cmd_bundle(IRC, "javascript")
-  tm.cmd_bundle(IRC, "Maude")
-  tm.cmd_bundle(IRC, 'datamapper')
-  tm.cmd_bundle(IRC, 'github')
-  tm.cmd_bundle(IRC, 'asdadfg;kerwekj')
+  # tm.cmd_bundle(IRC, "javascript")
+  # tm.cmd_bundle(IRC, "Maude")
+  # tm.cmd_bundle(IRC, 'datamapper')
+  # tm.cmd_bundle(IRC, 'github')
+  # tm.cmd_bundle(IRC, 'asdadfg;kerwekj')
+
+  tm.cmd_maintainer(IRC, "javascript")
+  tm.cmd_maintainer(IRC, "datamapper")
 
 end
