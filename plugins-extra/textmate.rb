@@ -227,6 +227,7 @@ class Textmate < PluginBase
     return irc.reply('USAGE: maintainer <bundle keyword(s)>') if line.to_s.empty?
     Async.run(irc) { TMHelper.find_maintainer(irc, line) }
   end
+  help :maintainer, "Shows who maintains the bundle(s) matching the given keyword."
 
 end
 
