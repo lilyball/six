@@ -95,7 +95,7 @@ module TMHelper
     if results.empty?
       # the google search code should be moved some place it can be shared among plugins.
       uri = "http://www.google.com/search?ie=utf8&oe=utf8&q=" + CGI.escape("#{keyword} textmate bundle")
-      TMHelper.call_with_body(irc, uri) do |body|
+      call_with_body(irc, uri) do |body|
         if body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
           link, desc = $1, $2.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.*?>/, '')
           irc.reply "#{link} (#{CGI.unescapeHTML desc})"
@@ -104,11 +104,11 @@ module TMHelper
         end
       end
     else
-      results[0..2].each do |r|
+      titles = results.map do |r|
         name, url = r['name'], r['source'][0]['url']
-        irc.reply "#{name} - #{url}"
-        sleep 0.2
+        {:title => name, :link => "#{name} - #{url}" }
       end
+      find_title_in_titles(irc, keyword, titles)
     end
   rescue => e
     irc.reply msg = "Error while searching for bundle: #{e.message}"
@@ -119,12 +119,12 @@ module TMHelper
     results = JSON[ open(GETBUNDLES_SERVICE + URI.escape(keyword)).read ]
     return irc.reply("Unknown response (#{results.class}).") unless results.is_a?(Array)
 
-    results[0..2].each do |r|
-      contact, status, url = r['contact'], r['status'], r['source'][0]['url']
-      irc.reply "#{contact} (#{status} - #{url})"
-      sleep 0.2
+    titles = results.map do |r|
+      name, contact, status, url = r['name'], r['contact'], r['status'], r['source'][0]['url']
+      {:title => name, :link => "#{contact} (#{status} - #{url})"}
     end
-
+    
+    find_title_in_titles(irc, keyword, titles)
   rescue => e
     irc.reply msg = "Error while searching for bundle: #{e.message}"
     $log.puts msg, e.backtrace
@@ -255,7 +255,7 @@ if $0 == __FILE__
   # tm.cmd_doc(IRC, 'tabs')
   # tm.cmd_doc(IRC, 'TeXt')
 
-  # tm.cmd_bundle(IRC, "javascript")
+  # tm.cmd_bundle(IRC, "javascript tools")
   # tm.cmd_bundle(IRC, "Maude")
   # tm.cmd_bundle(IRC, 'datamapper')
   # tm.cmd_bundle(IRC, 'github')
