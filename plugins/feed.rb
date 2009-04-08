@@ -203,6 +203,7 @@ module FeedStuff
 
   def run(out = STDOUT, filename = '/tmp/feeds.yaml', period = 30*60)
     tr = Thread.new do
+      sleep(120)
       begin
         load(filename)
 
