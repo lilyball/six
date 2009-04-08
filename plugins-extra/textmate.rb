@@ -105,7 +105,7 @@ module TMHelper
       end
     else
       titles = results.map do |r|
-        name, url = r['name'], r['source'][0]['url']
+        name, url = r['name'], r['url']
         {:title => name, :link => "#{name} - #{url}" }
       end
       find_title_in_titles(irc, keyword, titles)
@@ -120,7 +120,7 @@ module TMHelper
     return irc.reply("Unknown response (#{results.class}).") unless results.is_a?(Array)
 
     titles = results.map do |r|
-      name, contact, status, url = r['name'], r['contact'], r['status'], r['source'][0]['url']
+      name, contact, status, url = r['name'], r['contact'], r['status'], r['url']
       {:title => name, :link => "#{contact} (#{status} - #{url})"}
     end
     
