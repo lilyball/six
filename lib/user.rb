@@ -46,19 +46,29 @@ class User < PluginBase
     @brief_help = 'Manages registrated bot users.'
     super
 
-    # TODO/FIXME: This should be updated by notifications.
-    # For NickServ WHOIS.
-    @serv_nswi = {}
+    @ident_thread = nil
+    @ident_in_progress = nil
+    
+    @ident_queue = [] unless @ident_queue
+    
+    @active_users = {}
+    
+    # Keeps state from start of WHOIS to end of NickServ INFO when identifying a user.
+    @whois = {}
+    @whoisidentified_code = {}
+    
     if (cfg = $config['servers'])
       cfg.each do |name, serv|
         if (c = serv['services']) and (c = c['nickserv']) and (c = c['whois-code'])
-          @serv_nswi[name] = [c, nil, false, false]
+          @active_users[name] = {}
+          @whois[name] = {}
+          @whoisidentified_code[name] = c
         end
       end
     end
 
     # Set global variable.
-    @serv = {}
+    @servers = {}
     $user = self
 
     # Other plugins can add methods to this. It's important to remember to
@@ -203,7 +213,7 @@ class User < PluginBase
       nn = irc
       irc = nil
     else nn = irc.from.nick end
-    if !(s = @serv[sn]) or !(u = s[IRC::Address.normalize(nn)])
+    if !(s = @active_users[sn]) or !(u = s[IRC::Address.normalize(nn)])
       irc.reply "Do I know you?  At least not right now." if irc
       nil
     else (u == true) ? nn : u end
@@ -215,7 +225,7 @@ class User < PluginBase
   def get_data(user, sn = nil)
     if user.kind_of?(IrcWrapper)
       nn = user.from.nick
-      if (s = @serv[sn = user.server.name]) and (s = s[IRC::Address.normalize(nn)])
+      if (s = @active_users[sn = user.server.name]) and (s = s[IRC::Address.normalize(nn)])
         rn = (s == true) ? nn : s
         [rn, $config["servers/#{sn}/users/#{IRC::Address.normalize(rn)}"]]
       else
@@ -239,7 +249,7 @@ class User < PluginBase
     else
       nn = irc.from.nick
     end
-    if !(s = @serv[sn]) or !(u = s[IRC::Address.normalize(nn)])
+    if !(s = @active_users[sn]) or !(u = s[IRC::Address.normalize(nn)])
       irc.reply "You're not identified." if irc
       nil
     else
@@ -256,7 +266,7 @@ class User < PluginBase
     else
       nn = irc.from.nick
     end
-    if !(s = @serv[sn]) or !(u = s[IRC::Address.normalize(nn)])
+    if !(s = @active_users[sn]) or !(u = s[IRC::Address.normalize(nn)])
       irc.reply "You're not identified." if irc
     else
       rn = (u == true) ? nn : u
@@ -268,86 +278,6 @@ class User < PluginBase
     end
     nil
   end
-
-  # Register a new user.
-  def cmd_register(irc, password)
-    if irc.channel
-      irc.reply 'This command can only be used in private.'
-    elsif !password or password.length == 0
-      irc.reply 'Empty password given. USAGE: register <password>.'
-    else
-      from = irc.from
-      map = $config.ensure("servers/#{irc.server.name}/users/#{from.nnick}")
-      if map.empty?
-        map['password'] = Digest::SHA1.hexdigest(password)
-        irc.reply "Ok, you've been registrated with password '#{password}'. Default authentication mode is 'trusted'."
-      else
-        irc.reply "You're already registrated, or someone else is with YOUR nick! *gasp*"
-      end
-    end
-  end
-  help :register, "Use 'register <password>' in a private message, to register yourself as a user with your current nick and hostmask."
-
-  # Identify a 'secure mode' user.
-  def cmd_identify(irc, line)
-    pass, nick = line ? line.split(' ', 2) : nil
-    nick = nil if nick and nick.length == 0
-    if irc.channel
-      irc.reply 'This command can only be used in private.'
-    elsif !line or line.length == 0
-      irc.reply 'Empty password given. USAGE: identify <password> [nick-name].'
-    elsif nick and !$config['irc/track-nicks']
-      irc.reply "The nick-name argument is only supported when nick-name tracking is enabled, which it isn't."
-    elsif !(u = $config["servers/#{sn = irc.server.name}/users/#{nnn = IRC::Address.normalize(nn = nick ? nick : irc.from.nick)}"])
-      irc.reply "Do I know you? You'll want to 'register' instead, pal."
-    else
-      if pass[0] == ?-
-        silent = true
-        pass = pass[1..-1]
-      else silent = false end
-
-      # Auto detect hashed passwords.
-      hashed_pw = false
-      if (p = u['password'])
-        if p.length == 40 and p =~ /^[0-9a-f]{40}$/
-          pass = Digest::SHA1.hexdigest pass
-          hashed_pw = true
-        end
-      end
-
-      # Check if the given password is correct.
-      if !p or p != pass
-        irc.reply 'Incorrect password given.'
-        return
-      end
-
-      # Auto hash password, if needed.
-      unless hashed_pw
-        u['password'] = Digest::SHA1.hexdigest pass
-        irc.reply "Your password was rehashed." unless silent
-      end
-
-      if (s = @serv[sn]) and s[nnn]
-        irc.reply "You're already identified, #{nn} :-)." unless silent
-      else
-        real_nn = irc.from.nnick
-        irc.server.channels.each_value do |chan|
-          if chan.users.include?(real_nn)
-            @serv[sn] = (s = {}) unless s
-            seen_user(irc, s, real_nn, nnn)
-            unless silent
-              usr_str = (real_nn == nnn) ? '' : "real nick: #{nn}, "
-              irc.reply "Alright, you're now identified (#{usr_str}using mask: #{irc.from.mask})!"
-            end
-            global_actions(irc, nnn)
-            return
-          end
-        end
-        irc.reply 'You need to join at least one channel I am on, before you identify.'
-      end
-    end
-  end
-  help :identify, "Identify yourself. This is needed if you have authentication mode set to 'manual', or no trusted authentication source is available. Also needed if your current hostmask doesn't match the ones in your list."
 
   # Who am I?
   def cmd_whoami(irc, line)
@@ -363,7 +293,7 @@ class User < PluginBase
 
   # Who are we all?
   def chan_whoarewe(irc, chan, line)
-    if (s = @serv[irc.server.name])
+    if (s = @active_users[irc.server.name])
       nicks = []
       s.each do |k,v|
         nicks << ((v == true) ? k : "#{k} (#{v})") if chan.users.has_key? k
@@ -589,7 +519,7 @@ class User < PluginBase
 
   # Server command hook so we can watch NICKs.
   def hook_command_serv(irc, handled, cmd, *args)
-    return unless (s = @serv[sn = irc.server.name])
+    return unless (s = @active_users[sn = irc.server.name])
     case cmd
 
     when 'NICK'
@@ -681,42 +611,227 @@ class User < PluginBase
 
   end
 
+  # Called to initialize a new channel, after the user list and modes are fetched.
+  # FIXME: Wrapper? hmm.
+  def hook_init_chan(irc)
+
+    irc.channel.users.each do |nn, user|
+      next if @active_users.has_key?(user.nnick)
+      @ident_queue << user unless @ident_queue.include?(user)
+    end
+    
+    start_ident_thread(irc)
+
+  end
+  
+  def start_ident_thread(irc)
+    
+    # This is the main IDENT thread.
+
+    # it is started whenever we add user(s) to the @ident_queue (in hook_init_chan or
+    # hook_command_chan).
+    
+    # Users in the @ident_queue are processed one at a time.
+    
+    # For each user, we send a WHOIS «nick».  This gives us the account name which is
+    # currently using that nick (or says that the user has not logged in).  We then
+    # check that the nick is actually registered to that account name by sending
+    # NickServ INFO «nick».  The user is identified when the account names reported by
+    # WHOIS and NickServ INFO match.
+    
+    # When we send a WHOIS / NickServ INFO, a thread is started to wait for the response.
+    # The threads spin on a lock, waiting for the event handlers (hook_reply_serv or hook_notice_priv) to finish.
+    
+    # only one @ident_thread at a time please  
+    return unless @ident_thread.nil?
+    
+    @ident_thread = Thread.new(irc) do |irc|
+      begin
+
+        # turn off notices until the ident thread is done
+        irc.server.quiet_notices = true
+        
+        while @ident_queue.length > 0
+          
+          # don't start a new ident until the last one has finished.
+          sleep(0.1) while not @ident_in_progress.nil?
+          
+          @ident_in_progress = @ident_queue.pop
+          
+          # skip if this nnick has been identified already.
+          if @active_users.has_key?(@ident_in_progress.nnick)
+            @ident_in_progress = nil
+            next
+          end
+          
+          # NickServ really does not like too many messages coming in. We have to be careful.
+          sleep(1)
+          
+          # this call starts a thread that will eventually set @ident_in_progress = nil.
+          auto_ident(irc,@ident_in_progress)
+          
+        end
+      
+        # wait for the last ident to finish before terminating this thread.
+        sleep(1) until @ident_in_progress.nil?
+        
+      # errors need to be written on the log, since they will only crash this thread.
+      rescue Exception => e
+        $log.puts e.message
+        $log.puts e.backtrace.join("\n")
+      
+      ensure
+        @ident_thread = nil
+        @ident_in_progress = nil
+        irc.server.quiet_notices = false
+      end
+    end
+  end
+
   # Auto-identify a joined user.
   # FIXME: Make an internal one for speed-up of bot-join.
-  def auto_ident(irc, bot_join = false)
-
-    # Check if we know the user.
-    user = irc.from
-    nick_name = user.nick
-    nnick = IRC::Address.normalize(nick_name)
-    server = irc.server
-    server_name = server.name
-    if (s = @serv[server_name]) and (rn = s[nnick])
-      join_actions(irc, rn == true ? nnick : rn, bot_join)
-
-    elsif (users = $config["servers/#{server_name}/users/#{nnick}"])
-
-      auth = case users['auth']
-        when 'hostmask': 3
-        when 'manual': 1
-        else 2
+  def auto_ident(irc, user, bot_join = false)
+    
+    # Only for un-indentified people.
+    if ((au = @active_users[irc.server.name]) and au[@ident_in_progress.nnick])
+      @ident_in_progress = nil
+      return
+    end
+    
+    # initialize locks
+    @whois_lock = true
+    @info_lock  = true
+    
+    # This variable maintains state while the server responds
+    # to our WHOIS / NickServ INFO commands. This is necessary
+    # because hook_reply_serv / hook_notice_priv are called just
+    # once for each _line_ the server writes back.
+    @whois[irc.server.name] = {:mask                       => nil,
+                               :account_using_nick               => nil,
+                               :is_identified_to_services  => false,
+                               :account_that_owns_nick     => nil,
+                               :bot_join                   => bot_join}
+    
+    
+    # hook_reply_serv is called when the server responds to WHOIS
+    irc.server.cmd('WHOIS', @ident_in_progress.nick)
+    start_whois_thread(irc) # waits on @whois_lock
+    
+  end
+  
+  def start_whois_thread(irc)
+    Thread.new(irc) do |irc|
+      begin
+        
+        # wait until the WHOIS is done.
+        sleep(0.1) while @whois_lock
+        
+        # if WHOIS tells us that the user is not logged in, we are done.
+        unless @whois[irc.server.name][:is_identified] # user is identified to services
+          $log.puts("(server: #{irc.server.name}) : #{@ident_in_progress.nick} is not signed in with NickServ.")
+          @ident_in_progress = nil
+          Thread.exit
+        end
+        
+        # hook_notice_priv is called when the server responds to NickServ INFO
+        irc.server.cmd("PRIVMSG", "NickServ", "INFO #{@ident_in_progress.nick}")
+        start_nickserv_info_thread(irc) # waits on @info_lock
+        
+      rescue Exception => e
+        $log.puts e.message
+        $log.puts e.backtrace.join("\n")
       end
+    end
+  end
+ 
+  def start_nickserv_info_thread(irc)
+    Thread.new(irc) do |irc|
+      begin
+        
+        sn    = irc.server.name
+        
+        nick  = @ident_in_progress.nick
+        nnick = @ident_in_progress.nnick
+        
+        # Now we wait for NickServ to respond.
+        sleep(0.1) while @info_lock
+        
+        if @whois[sn][:account_that_owns_nick] == @whois[sn][:account_using_nick]
+          
+          # accounts match, so we log in the user.
+          
+          map = $config.ensure("servers/#{sn}/users/#{nnick}")
+          if (users = $config["servers/#{sn}/users/#{nnick}"])
+            
+            # We need to fake-up an Address...
+            old_from = irc.from
+            irc.from = IRC::Address.new(@whois[:mask], irc.server)
+            seen_user(irc, @active_users[sn], nnick)
+            
+            $log.puts "(server: #{sn}) : #{nick} (account #{@whois[sn][:account_using_nick]}) has been identified."
+            
+            global_actions(irc, nil, @whois[:bot_join])
+            irc.from = old_from
+          end
 
-      # Hostmask ident?
-      if auth >= 3 and users['masks'].include_mask?(user.mask)
-        (@serv[server_name] = (s = {})) unless s
-        seen_user(irc, s, nnick)
-        $log.puts "User #{nick_name} has been recognized!"
-        join_actions(irc, nnick, bot_join)
-        return
+        elsif @whois[sn][:account_that_owns_nick].nil?
+          $log.puts("(server: #{sn}) : #{@whois[sn][:account_using_nick]} is using an unregistered nick “#{nick}”.")
+        
+        else
+          $log.puts "(server: #{sn}) : #{nick} belonging to #{@whois[sn][:account_that_owns_nick]} is in use by #{@whois[sn][:account_using_nick]}!"
+        
+        end
+      
+      rescue Exception => e
+        $log.puts e.message
+        $log.puts e.backtrace.join("\n")
+      ensure
+        @ident_in_progress = nil
       end
+    end
+  end
 
-      # NickServ ident?
-      if auth >= 2 and (s = @serv_nswi[server_name])
-        s[3] = bot_join
-        server.cmd('WHOIS', nick_name)
+  # Capture WHOIS output (for auto_ident).
+  # This function is called once for each server reply
+  # it populates the @whois variable, before unlocking the @whois_lock
+  # allowing the whois_thread to run.
+  def hook_reply_serv(irc, code, *data)
+        
+    return unless (whois = @whois[sn = irc.server.name])
+    
+    case code
+    when 318,401 # ERR_NOSUCHNICK / ENDOFWHOIS
+      @whois_lock = false
+    
+    when 311
+      whois[:mask] = "#{data[0]}!#{data[1]}@#{data[2]}"
+
+    # Ident info.
+    when @whoisidentified_code[sn] # WHOISIDENTIFIED
+      if data[-1] =~ /is signed on as account (.*)/
+        whois[:is_identified] = true
+        whois[:account_using_nick]  = IRC::Address.normalize($1) # record account name
       end
-
+    end
+    
+  end
+  
+  
+  # This function is called once for each line in the NickServ INFO response.
+  # It checks that the account name from NickServ INFO matches the account name
+  # from WHOIS and populates @whois with that data. It then releases @info_lock
+  # allowing the NickServ INFO thread to run.
+  def hook_notice_priv(irc, message)
+        
+    if message =~ /\*\*\*/ or message =~ /is not registered/
+      @info_lock = false
+    end
+    
+    sn = irc.server.name
+    message = message.split("\x02")
+    
+    if irc.from.nnick == "nickserv" and message[0].index('Information on') == 0
+      @whois[sn][:account_that_owns_nick] = IRC::Address.normalize(message[3])
     end
   end
 
@@ -742,18 +857,9 @@ class User < PluginBase
     server_map.delete(nick)
   end
 
-  # Called to initialize a new channel, after the user list and modes are fetched.
-  # FIXME: Wrapper? hmm.
-  def hook_init_chan(irc)
-    irc.channel.users.each do |nn, u|
-      irc.from = u
-      auto_ident(irc, true)
-    end
-  end
-
   # Internal helper.
   def part_or_kick(irc, nick)
-    return unless (s = @serv[(serv = irc.server).name]) and (u = s[nick])
+    return unless (s = @active_users[(serv = irc.server).name]) and (u = s[nick])
     serv.channels.each_value do |chan|
       return if chan.users.keys.include?(nick)
     end
@@ -766,7 +872,10 @@ class User < PluginBase
     case cmd
 
     when 'JOIN'
-      auto_ident(irc)
+      
+      @ident_queue << irc.from unless @ident_queue.include?(irc.from)      
+      start_ident_thread(irc)
+      
     when 'PART'
       part_or_kick(irc, irc.from.nnick)
     when 'KICK'
@@ -775,45 +884,6 @@ class User < PluginBase
     end
   end
 
-  # To capture WHOIS output (for NickServ auto-ident).
-  # TODO/FIXME: Store in a map if the WHOIS was triggered by bot-join?
-  def hook_reply_serv(irc, code, *data)
-    if (s = @serv_nswi[sn = (server = irc.server).name])
-
-      # Only for un-indentified people.
-      nick_name = IRC::Address.normalize(data[0])
-      return if (serv = @serv[sn]) and serv[nick_name]
-
-      # Mask info.
-      if code == 311
-        s[1] = "#{data[0]}!#{data[1]}@#{data[2]}"
-
-      # Ident info.
-      elsif code == s[0]
-        s[2] = true
-
-      # End of who-is.
-      elsif code == 318
-        if s[2] and (mask = s[1])
-          if (users = $config["servers/#{sn}/users/#{nick_name}"])
-            (@serv[sn] = (serv = {})) unless serv
-
-            # We need to fake-up an Address...
-            old_from = irc.from
-            irc.from = IRC::Address.new(mask, server)
-            seen_user(irc, serv, nick_name)
-            $log.puts "User #{nick_name} has been recognized via NickServ WHOIS (server: #{sn})!"
-            global_actions(irc, nil, s[3])
-            irc.from = old_from
-
-          end
-        end
-        s[1] = nil
-        s[2] = false
-      end
-
-    end
-  end
 
   # Check if a command can be executed.
   def command_check(irc, plugin_name, command_name)
@@ -866,7 +936,7 @@ class User < PluginBase
       irc_user = irc.from
       nick = irc_user.nnick
       users = serv['users']
-      if (s = @serv[sn]) and (u = s[nick])
+      if (s = @active_users[sn]) and (u = s[nick])
         nick = u unless u == true
       elsif users and (user = users[nick]) and
         user['auth'] == 'hostmask' and user['masks'].include_mask?(irc_user.mask)
