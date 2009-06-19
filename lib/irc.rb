@@ -234,9 +234,11 @@ class Irc < PluginBase
     def initialize(name, *args)
       super(*args)
       @name = name
+      @quiet_notices = false
     end
 
     attr_reader :plugins, :name
+    attr_accessor :quiet_notices
 
     def channel_class
       Channel
@@ -360,7 +362,7 @@ class Irc < PluginBase
     end
 
     def on_notice(from, message)
-      $log.puts "#{from} noted: #{message}"
+      $log.puts "#{from} noted: #{message}" unless @quiet_notices
       call_hooks(:notice_priv, from, message)
     end
 
