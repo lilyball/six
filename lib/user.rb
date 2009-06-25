@@ -728,7 +728,7 @@ class User < PluginBase
         
         # if WHOIS tells us that the user is not logged in, we are done.
         unless @whois[irc.server.name][:is_identified] # user is identified to services
-          $log.puts("(server: #{irc.server.name}) : #{@ident_in_progress.nick} is not signed in with NickServ.")
+          $log.puts("[#{irc.server.name}] Unidentified user “#{@ident_in_progress.nick}”.")
           @ident_in_progress = nil
           Thread.exit
         end
@@ -768,17 +768,17 @@ class User < PluginBase
             irc.from = IRC::Address.new(@whois[:mask], irc.server)
             seen_user(irc, @active_users[sn], nnick)
             
-            $log.puts "(server: #{sn}) : #{nick} (account #{@whois[sn][:account_using_nick]}) has been identified."
+            $log.puts "[#{sn}] Identified “#{nick}” aka #{@whois[sn][:account_using_nick]}."
             
             global_actions(irc, nil, @whois[:bot_join])
             irc.from = old_from
           end
 
         elsif @whois[sn][:account_that_owns_nick].nil?
-          $log.puts("(server: #{sn}) : #{@whois[sn][:account_using_nick]} is using an unregistered nick “#{nick}”.")
+          $log.puts("[#{sn}] Unregistered nick “#{nick}” in use by #{@whois[sn][:account_using_nick]}.")
         
         else
-          $log.puts "(server: #{sn}) : #{nick} belonging to #{@whois[sn][:account_that_owns_nick]} is in use by #{@whois[sn][:account_using_nick]}!"
+          $log.puts "[#{sn}] ¡“#{nick}” aka #{@whois[sn][:account_using_nick]} is using #{@whois[sn][:account_that_owns_nick]}'s nick!"
         
         end
       
