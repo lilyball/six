@@ -30,7 +30,7 @@ class Scribe < PluginBase
         if count > 0
           notes = "note#{'s' if un.length > 1}"
           them  = un.length > 1 ? 'them' : 'it'
-          irc.from.notice("You have #{un.length} unread #{notes} (#{count} of which I haven't told you about before). Use the 'notes' command to list #{them}.")
+          irc.from.privmsg("You have #{un.length} unread #{notes} (#{count} of which I haven't told you about before). Use the 'notes' command to list #{them}.")
         end
       end
     end
