@@ -656,7 +656,7 @@ class User < PluginBase
           # don't start a new ident until the last one has finished.
           sleep(0.1) while not @ident_in_progress.nil?
           
-          @ident_in_progress = @ident_queue.pop
+          @ident_in_progress = @ident_queue.shift
           
           # skip if this nnick has been identified already.
           if @active_users.has_key?(@ident_in_progress.nnick)
@@ -873,7 +873,10 @@ class User < PluginBase
 
     when 'JOIN'
       
-      @ident_queue << irc.from unless @ident_queue.include?(irc.from)      
+      # JOINing puts us on top of the queue.
+      @ident_queue.delete(irc.from)
+      @ident_queue.unshift(irc.from)
+      
       start_ident_thread(irc)
       
     when 'PART'
