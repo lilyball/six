@@ -3,7 +3,7 @@
 #
 
 require 'digest/sha1'
-
+require 'enumerator'
 
 # Neat array stuff.
 class Array
@@ -299,7 +299,10 @@ class User < PluginBase
         nicks << ((v == true) ? k : "#{k} (#{v})") if chan.users.has_key? k
       end
       unless nicks.empty?
-        irc.reply "I know these people: #{nicks.join(', ')}."
+        irc.reply "I know these people:"
+        nicks.each_slice(10) do |n|
+          irc.reply n.join(", ")
+        end
         return
       end
     end
