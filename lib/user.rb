@@ -723,8 +723,18 @@ class User < PluginBase
     Thread.new(irc) do |irc|
       begin
         
-        # wait until the WHOIS is done.
-        sleep(0.1) while @whois_lock
+        # Now we wait (up to a minute) for WHOIS.
+        (60/(t = 0.1)).to_i.times do
+            break unless @whois_lock
+            sleep(t)
+        end
+        
+        if @whois_lock # wait finished before @whois_lock was released.
+          @ident_queue << @ident_in_progress
+          @ident_in_progress = nil
+          start_ident_thread(irc)
+          Thread.exit
+        end
         
         # if WHOIS tells us that the user is not logged in, we are done.
         unless @whois[irc.server.name][:is_identified] # user is identified to services
@@ -753,8 +763,19 @@ class User < PluginBase
         nick  = @ident_in_progress.nick
         nnick = @ident_in_progress.nnick
         
-        # Now we wait for NickServ to respond.
-        sleep(0.1) while @info_lock
+        # Now we wait (up to a minute) for NickServ to respond.
+        (60/(t = 0.1)).to_i.times do
+            break unless @info_lock
+            sleep(t)
+        end
+        
+        # wait finished before @info_lock was released.
+        if @info_lock
+          @ident_queue << @ident_in_progress
+          @ident_in_progress = nil
+          start_ident_thread(irc)
+          Thread.exit
+        end
         
         if @whois[sn][:account_that_owns_nick] == @whois[sn][:account_using_nick]
           
