@@ -109,7 +109,8 @@ module FeedStuff
         suffix = @item.link ? " — #{@item.link}" : ''
         length = limit - prefix.length - suffix.length
 
-        body   = @item.description.gsub(/<.*?>/, ' ')
+        body   = @item.description.gsub(/<(area|base(font)?|br|col|frame|hr|img|input|isindex|link|meta|param)\b.*?>/, ' ')
+        body   = body.gsub(/<.*?>/, '')
         body   = CGI::unescapeHTML(body)
         body   = body.gsub(/\s+/, ' ').gsub(/\A\s+|\s+\z/, '')
         body   = body.sub(/(.{0,#{length}})(\s.+)?$/) { $1 + ($2.nil? ? '' : '…')}
