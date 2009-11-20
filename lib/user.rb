@@ -643,7 +643,11 @@ class User < PluginBase
     # WHOIS and NickServ INFO match.
     
     # When we send a WHOIS / NickServ INFO, a thread is started to wait for the response.
-    # The threads spin on a lock, waiting for the event handlers (hook_reply_serv or hook_notice_priv) to finish.
+    # The threads spin on a lock, waiting for the event handlers (hook_reply_serv or hook_notice_priv)
+    # to finish.  We have these threads waiting instead of directly processing the response in
+    # the event handlers is that we don't know for sure that the server will respond to our
+    # commands. If it doesn't respond and we don't have something timing out on the response,
+    # our ident loop would deadlock.
     
     # only one @ident_thread at a time please  
     return unless @ident_thread.nil?
@@ -710,7 +714,7 @@ class User < PluginBase
     # because hook_reply_serv / hook_notice_priv are called just
     # once for each _line_ the server writes back.
     @whois[irc.server.name] = {:mask                       => nil,
-                               :account_using_nick               => nil,
+                               :account_using_nick         => nil,
                                :is_identified_to_services  => false,
                                :account_that_owns_nick     => nil,
                                :bot_join                   => bot_join}
