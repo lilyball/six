@@ -52,6 +52,10 @@ class Address
   attr_reader :user, :host, :server
   attr_accessor :nick
 
+  def ==(addr)
+    mask == addr.mask
+  end
+
   # Normalize a nick name.
   def Address.normalize(nick_name)
     nick_name.to_s.downcase.tr('[]\\', '{}|')
