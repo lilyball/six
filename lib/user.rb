@@ -836,10 +836,8 @@ class User < PluginBase
 
     # Ident info.
     when @whoisidentified_code[sn] # WHOISIDENTIFIED
-      if data[-1] =~ /is signed on as account (.*)/
-        whois[:is_identified] = true
-        whois[:account_using_nick]  = IRC::Address.normalize($1) # record account name
-      end
+      whois[:is_identified] = true
+      whois[:account_using_nick]  = IRC::Address.normalize(data[1]) # record account name
     end
     
   end
