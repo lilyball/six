@@ -2,18 +2,12 @@
 # TextMate related stuff.
 #
 
-begin
-  require "rubygems"
-rescue LoadError
-end
-
-
 require 'net/http'
 require 'set'
 require 'yaml'
 require "cgi"
 require "open-uri"
-require "json"
+require "yaml"
 
 # ===============================
 # = To facilitate local testing =
@@ -89,7 +83,7 @@ module TMHelper
   end
 
   def find_bundle(irc, keyword)
-    results = JSON[ open(GETBUNDLES_SERVICE + URI.escape(keyword)).read ]
+    results = YAML::load(open(GETBUNDLES_SERVICE + URI.escape(keyword)).read)
     return irc.reply("Unknown response (#{results.class}).") unless results.is_a?(Array)
 
     if results.empty?
@@ -116,7 +110,7 @@ module TMHelper
   end
 
   def find_maintainer(irc, keyword)
-    results = JSON[ open(GETBUNDLES_SERVICE + URI.escape(keyword)).read ]
+    results = YAML::load(open(GETBUNDLES_SERVICE + URI.escape(keyword)).read)
     return irc.reply("Unknown response (#{results.class}).") unless results.is_a?(Array)
 
     titles = results.map do |r|
