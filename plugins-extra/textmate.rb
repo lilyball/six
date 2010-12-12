@@ -39,7 +39,7 @@ module TMHelper
   module_function
 
   def phrase_to_keywords(phrase)
-    phrase.gsub(/\b(\w+)s\b/, '\1').downcase.split(/\W/).to_set
+    phrase.downcase.gsub(/\b(\w+)s\b/, '\1').split(/\W/).to_set
   end
 
   # titles is array of hashes with :link and :title keys
