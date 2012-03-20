@@ -63,8 +63,8 @@ class Web < PluginBase
         if re.code == '200'
           if re.body =~ %r{alt="Clock"></td><td valign=middle>(.+?)</td>}
             irc.reply $1.gsub('<b>', "\x02").gsub('</b>', '').decode_entities
-          elsif re.body =~ /<a href="([^"]+)" class=l>(.+?)<\/a>/
-            link = $1.decode_entities
+          elsif re.body =~ /<h3 class="r"><a href="\/url\?q=([^"&]+)[^"]+">(.+?)<\/a>/
+            link = URI.unescape($1.decode_entities)
             desc = $2.gsub('<b>', "\x02").gsub('</b>', "\x0f").decode_entities
             desc.gsub!(/<.*?>/, '') # strip tags
             irc.reply "#{link} (#{desc})"
@@ -99,10 +99,10 @@ class Web < PluginBase
         re = http.get("/search?ie=utf8&oe=utf8&q=site%3Awikipedia.org+#{search}", 
           { 'User-Agent' => 'CyBrowser' })
         if re.code == '200'
-          if re.body =~ /<h3 class=r><a href="([^"]+)".+?<div class="s">(.+?)<b>.../
+          if re.body =~ /<h3 class="r"><a href="\/url\?q=([^"&]+)[^"]+".+?<div class="s">(.+?)<b>.../
             link, desc = $1, $2
             desc = desc.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
-            link = link.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities
+            link = URI.unescape(link.gsub('<b>', "\x02").gsub('</b>', "\x0f").gsub(/<.+?>/, '').decode_entities)
             irc.reply desc + " ( " + link.gsub(%r[^(?!http://)], 'http://') + " )"
           elsif re.body =~ /did not match any documents/
             irc.reply 'No definition found.'
